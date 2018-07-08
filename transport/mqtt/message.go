@@ -21,10 +21,12 @@ const (
 )
 
 func (m *mqtt) OnAnnounce(p *libmqtt.PublishPacket) {
+	m.RLock()
+	defer m.RUnlock()
 	if m.deviceState == nil {
 		return
 	}
-	dev := &device.DeviceInfo{}
+	dev := &device.Info{}
 	err := json.Unmarshal(p.Payload, dev)
 	if dev.Topic == "" {
 		dev.Topic = p.TopicName[len(announceTopic)+1:]
@@ -49,9 +51,11 @@ func (m *mqtt) OnFeature(p *libmqtt.PublishPacket) {
 }
 
 // DeviceState returns a channel which publishes information about new and changed devices
-func (m *mqtt) DeviceState() chan *device.DeviceInfo {
+func (m *mqtt) DeviceState() chan *device.Info {
+	m.Lock()
+	defer m.Unlock()
 	if m.deviceState == nil {
-		m.deviceState = make(chan *device.DeviceInfo)
+		m.deviceState = make(chan *device.Info)
 		m.sendDiscover()
 	}
 	return m.deviceState

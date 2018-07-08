@@ -4,47 +4,47 @@ import (
 	"encoding/json"
 	"github.com/goiiot/libmqtt"
 	"github.com/hemtjanst/bibliotek/device"
+	"github.com/hemtjanst/bibliotek/feature"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"testing"
 	"time"
 )
 
 func TestMessage(t *testing.T) {
-	mockDev := func(t string, d *device.DeviceInfo) *libmqtt.PublishPacket {
+	mockDev := func(t string, d *device.Info) *libmqtt.PublishPacket {
 		data, _ := json.Marshal(d)
 		return &libmqtt.PublishPacket{TopicName: t, Payload: data}
 	}
-	mock := &MockMqttClient{
-		DestroyChan: make(chan bool, 5),
+	client := &MockMqttClient{
 		ConnectCode: libmqtt.CodeSuccess,
 	}
 
 	cl := &mqtt{
-		deviceState:   make(chan *device.DeviceInfo, 16),
-		discoverDelay: 1 * time.Second,
-	}
-	err := cl.init(nil, mock)
-	if err != nil {
-		t.Errorf("Got error from init: %v", err)
+		deviceState:   make(chan *device.Info, 16),
+		discoverDelay: 1 * time.Millisecond,
 	}
 
-	cl.OnAnnounce(mockDev("announce/teapot", &device.DeviceInfo{
+	client.On("Connect", mock.Anything).Return()
+	client.On("Publish", discoverTopic).Return()
+	client.On("Subscribe", announceTopic+"/#").Return()
+	err := cl.init(nil, client)
+	assert.Nil(t, err)
+
+	cl.OnAnnounce(mockDev("announce/teapot", &device.Info{
 		Name:         "I'm a teapot",
 		Manufacturer: "foobar",
 		Model:        "",
 		LastWillID:   "xyz-123",
 		Type:         "switch",
-		Features: map[string]*device.FeatureInfo{
+		Features: map[string]*feature.Info{
 			"on": {},
 		},
 	}))
 
 	dev := <-cl.deviceState
 
-	if dev.Reachable {
-		t.Errorf("Device shouldn't be reachable")
-	}
-	if dev.Name != "I'm a teapot" {
-		t.Errorf("Name is '%s'", dev.Name)
-	}
-
+	assert.Equal(t, "I'm a teapot", dev.Name)
+	time.Sleep(10 * time.Millisecond)
+	client.AssertExpectations(t)
 }

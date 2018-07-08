@@ -2,20 +2,23 @@ package mqtt
 
 import (
 	"context"
+	"errors"
 	"github.com/goiiot/libmqtt"
 	"github.com/hemtjanst/bibliotek/device"
 	"log"
+	"sync"
 	"time"
 )
 
 type mqtt struct {
-	deviceState   chan *device.DeviceInfo
+	deviceState   chan *device.Info
 	client        mqttClient
 	addr          string
 	initCh        chan error
 	sub           []string
 	discoverSent  bool
 	discoverDelay time.Duration
+	sync.RWMutex
 }
 
 func New(ctx context.Context, addr string) (m *mqtt, err error) {
@@ -43,10 +46,17 @@ func New(ctx context.Context, addr string) (m *mqtt, err error) {
 }
 
 func (m *mqtt) init(ctx context.Context, client mqttClient) (err error) {
+	m.Lock()
+	if m.client != nil {
+		m.Unlock()
+		return errors.New("already initialized")
+	}
 	m.initCh = make(chan error)
 	m.client = client
+	m.Unlock()
 	m.client.Connect(m.onConnect)
 	err, _ = <-m.initCh
+	m.initCh = nil
 
 	if err != nil {
 		m.client.Destroy(true)
@@ -64,13 +74,14 @@ func (m *mqtt) init(ctx context.Context, client mqttClient) (err error) {
 }
 
 func (m *mqtt) onConnect(server string, code byte, err error) {
+	m.Lock()
+	defer m.Unlock()
 	if m.initCh != nil {
 		if err != nil {
 			m.initCh <- err
 		} else {
 			close(m.initCh)
 		}
-		m.initCh = nil
 	} else if code == libmqtt.CodeSuccess {
 		m.client.Publish(&libmqtt.PublishPacket{TopicName: "devnull"})
 	}
@@ -89,6 +100,8 @@ func (m *mqtt) sendDiscover() {
 	m.discoverSent = false
 	m.client.Subscribe(&libmqtt.Topic{Name: "announce/#"})
 	time.AfterFunc(m.discoverDelay, func() {
+		m.Lock()
+		defer m.Unlock()
 		m.discoverSent = true
 		m.client.Publish(&libmqtt.PublishPacket{
 			TopicName: "discover",

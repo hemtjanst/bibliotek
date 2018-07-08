@@ -9,7 +9,7 @@ import (
 type Transport interface {
 	// HandleDeviceState should get a callback when a devices joins, leaves or
 	// updates its metadata
-	DeviceState() chan *device.DeviceInfo
+	DeviceState() chan *device.Info
 
 	/*
 		// HandleFeatureState is called with the id of the device and a feature name,
