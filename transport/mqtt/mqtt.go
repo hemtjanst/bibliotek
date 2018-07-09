@@ -29,7 +29,7 @@ func New(ctx context.Context, addr string) (m *mqtt, err error) {
 	client, err := libmqtt.NewClient(
 		libmqtt.WithServer(addr),
 		libmqtt.WithKeepalive(10, 1.2),
-		libmqtt.WithLog(libmqtt.Info),
+		libmqtt.WithLog(libmqtt.Silent),
 		libmqtt.WithRouter(newRouter(m)),
 		libmqtt.WithDialTimeout(5),
 	)
@@ -82,8 +82,6 @@ func (m *mqtt) onConnect(server string, code byte, err error) {
 		} else {
 			close(m.initCh)
 		}
-	} else if code == libmqtt.CodeSuccess {
-		m.client.Publish(&libmqtt.PublishPacket{TopicName: "devnull"})
 	}
 
 	if err != nil {

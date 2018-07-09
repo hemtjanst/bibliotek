@@ -11,7 +11,7 @@
   branch = "master"
   name = "github.com/goiiot/libmqtt"
   packages = ["."]
-  revision = "bd2a91e53a06b559daa8f608c34a9c54e0912c94"
+  revision = "8973a7d2906bbc470646fa666198471bea035bae"
 
 [[projects]]
   name = "github.com/pmezard/go-difflib"

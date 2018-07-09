@@ -22,10 +22,11 @@ const (
 
 func (m *mqtt) OnAnnounce(p *libmqtt.PublishPacket) {
 	m.RLock()
-	defer m.RUnlock()
 	if m.deviceState == nil {
+		m.RUnlock()
 		return
 	}
+	m.RUnlock()
 	dev := &device.Info{}
 	err := json.Unmarshal(p.Payload, dev)
 	if dev.Topic == "" {
@@ -55,7 +56,7 @@ func (m *mqtt) DeviceState() chan *device.Info {
 	m.Lock()
 	defer m.Unlock()
 	if m.deviceState == nil {
-		m.deviceState = make(chan *device.Info)
+		m.deviceState = make(chan *device.Info, 10)
 		m.sendDiscover()
 	}
 	return m.deviceState
