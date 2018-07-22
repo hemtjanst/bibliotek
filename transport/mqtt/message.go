@@ -2,9 +2,10 @@ package mqtt
 
 import (
 	"encoding/json"
+	"log"
+
 	"github.com/goiiot/libmqtt"
 	"github.com/hemtjanst/bibliotek/device"
-	"log"
 )
 
 type MessageHandler interface {
@@ -48,7 +49,14 @@ func (m *mqtt) OnDiscover(p *libmqtt.PublishPacket) {
 }
 
 func (m *mqtt) OnFeature(p *libmqtt.PublishPacket) {
-
+	m.RLock()
+	s, ok := m.sub[p.TopicName]
+	m.RUnlock()
+	if ok {
+		for _, f := range s {
+			f <- p.Payload
+		}
+	}
 }
 
 // DeviceState returns a channel which publishes information about new and changed devices

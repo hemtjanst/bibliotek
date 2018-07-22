@@ -15,15 +15,23 @@ type Feature interface {
 	Step() int
 }
 
-type feature struct {
-	info *Info
-	name string
+type FeatureTransporter interface {
+	SubscribeFeature(*Info) chan []byte
+	UpdateFeature(*Info, []byte)
+	SetFeature(*Info, []byte)
 }
 
-func New(name string, info *Info) Feature {
+type feature struct {
+	info        *Info
+	name        string
+	transporter FeatureTransporter
+}
+
+func New(name string, info *Info, transporter FeatureTransporter) Feature {
 	return &feature{
-		name: name,
-		info: info,
+		name:        name,
+		info:        info,
+		transporter: transporter,
 	}
 }
 

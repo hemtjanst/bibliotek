@@ -1,6 +1,10 @@
 package device
 
-import "github.com/hemtjanst/bibliotek/feature"
+import (
+	"fmt"
+
+	"github.com/hemtjanst/bibliotek/feature"
+)
 
 type Info struct {
 	Topic        string                   `json:"topic"`
@@ -15,8 +19,9 @@ type Info struct {
 }
 
 type device struct {
-	info     *Info
-	features map[string]feature.Feature
+	info        *Info
+	features    map[string]feature.Feature
+	transporter DeviceTransporter
 }
 
 func (d *device) Id() string           { return d.info.Topic }
@@ -47,19 +52,36 @@ type Device interface {
 	Feature(name string) feature.Feature
 }
 
-func New(info *Info) Device {
+type DeviceTransporter interface {
+	Publish(topic string, payload []byte, retain bool)
+	Subscribe(topic string) chan []byte
+}
+
+func New(info *Info, transporter DeviceTransporter) (Device, error) {
 	if info == nil {
-		info = &Info{}
+		return nil, fmt.Errorf("cannot create device without info")
 	}
+	if info.Topic == "" {
+		return nil, fmt.Errorf("cannot have a device info with an empty topic")
+	}
+
 	d := &device{
-		info:     info,
-		features: map[string]feature.Feature{},
+		info:        info,
+		features:    map[string]feature.Feature{},
+		transporter: transporter,
 	}
+
 	if info.Features != nil {
 		for name, ft := range info.Features {
-			d.features[name] = feature.New(name, ft)
+			if ft.GetTopic == "" {
+				ft.GetTopic = info.Topic + "/" + name + "/get"
+			}
+			if ft.SetTopic == "" {
+				ft.SetTopic = info.Topic + "/" + name + "/set"
+			}
+			d.features[name] = feature.New(name, ft, d)
 		}
 	}
 
-	return d
+	return d, nil
 }

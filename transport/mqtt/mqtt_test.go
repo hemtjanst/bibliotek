@@ -3,11 +3,12 @@ package mqtt
 import (
 	"context"
 	"errors"
+	"testing"
+	"time"
+
 	"github.com/goiiot/libmqtt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"testing"
-	"time"
 )
 
 type MockMqttClient struct {
@@ -105,5 +106,69 @@ func TestClientError(t *testing.T) {
 	client.On("Destroy", true).Return()
 	err := cl.init(ctx, client)
 	assert.Equal(t, expectErr, err)
+	client.AssertExpectations(t)
+}
+
+func TestPublish(t *testing.T) {
+	client := &MockMqttClient{
+		ConnectCode: libmqtt.CodeSuccess,
+	}
+
+	cl := &mqtt{
+		addr:          "127.0.0.1:1883",
+		discoverDelay: 500 * time.Millisecond,
+	}
+
+	client.On("Connect", mock.Anything).Return()
+
+	err := cl.init(context.Background(), client)
+	assert.Nil(t, err)
+
+	client.On("Publish", "harhartest").Return()
+	cl.Publish("harhartest", []byte{}, true)
+	client.AssertExpectations(t)
+}
+
+func TestSubscribe(t *testing.T) {
+	client := &MockMqttClient{
+		ConnectCode: libmqtt.CodeSuccess,
+	}
+
+	cl := &mqtt{
+		addr:          "127.0.0.1:1883",
+		discoverDelay: 500 * time.Millisecond,
+	}
+
+	client.On("Connect", mock.Anything).Return()
+
+	err := cl.init(context.Background(), client)
+	assert.Nil(t, err)
+
+	client.On("Subscribe", "harhartest").Return()
+	res1 := cl.Subscribe("harhartest")
+	res2 := cl.Subscribe("harhartest")
+	client.AssertNumberOfCalls(t, "Subscribe", 1)
+	cl.OnFeature(&libmqtt.PublishPacket{
+		TopicName: "harhartest",
+		Payload:   []byte("test1"),
+		IsRetain:  true,
+	})
+
+	select {
+	case msg := <-res1:
+		assert.Equal(t, []byte("test1"), msg)
+	case <-time.After(100 * time.Millisecond):
+		t.Errorf("Reached timeout for res1")
+	}
+	select {
+	case msg := <-res2:
+		assert.Equal(t, []byte("test1"), msg)
+	case <-time.After(100 * time.Millisecond):
+		t.Errorf("Reached timeout for res1")
+	}
+
+	client.TriggerReconnect(0x00, nil)
+	client.On("Subscribe", "harhartest").Return()
+	client.AssertNumberOfCalls(t, "Subscribe", 2)
 	client.AssertExpectations(t)
 }

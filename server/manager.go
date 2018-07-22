@@ -2,8 +2,9 @@ package server
 
 import (
 	"context"
-	"github.com/hemtjanst/bibliotek/device"
 	"log"
+
+	"github.com/hemtjanst/bibliotek/device"
 )
 
 type Transport interface {

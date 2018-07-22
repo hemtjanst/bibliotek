@@ -3,11 +3,12 @@ package mqtt
 import (
 	"context"
 	"errors"
-	"github.com/goiiot/libmqtt"
-	"github.com/hemtjanst/bibliotek/device"
 	"log"
 	"sync"
 	"time"
+
+	"github.com/goiiot/libmqtt"
+	"github.com/hemtjanst/bibliotek/device"
 )
 
 type mqtt struct {
@@ -15,7 +16,7 @@ type mqtt struct {
 	client        mqttClient
 	addr          string
 	initCh        chan error
-	sub           []string
+	sub           map[string][]chan []byte
 	discoverSent  bool
 	discoverDelay time.Duration
 	sync.RWMutex
@@ -52,6 +53,7 @@ func (m *mqtt) init(ctx context.Context, client mqttClient) (err error) {
 		return errors.New("already initialized")
 	}
 	m.initCh = make(chan error)
+	m.sub = map[string][]chan []byte{}
 	m.client = client
 	m.Unlock()
 	m.client.Connect(m.onConnect)
@@ -92,6 +94,12 @@ func (m *mqtt) onConnect(server string, code byte, err error) {
 	if m.deviceState != nil {
 		m.sendDiscover()
 	}
+
+	for topic := range m.sub {
+		m.client.Subscribe(
+			&libmqtt.Topic{Name: topic},
+		)
+	}
 }
 
 func (m *mqtt) sendDiscover() {
@@ -107,4 +115,29 @@ func (m *mqtt) sendDiscover() {
 			Payload:   []byte("1"),
 		})
 	})
+}
+
+func (m *mqtt) Publish(topic string, payload []byte, retain bool) {
+	m.client.Publish(
+		&libmqtt.PublishPacket{
+			TopicName: topic,
+			Payload:   payload,
+			IsRetain:  retain,
+		},
+	)
+}
+func (m *mqtt) Subscribe(topic string) chan []byte {
+	m.Lock()
+	defer m.Unlock()
+	c := make(chan []byte, 5)
+
+	if _, ok := m.sub[topic]; ok {
+		m.sub[topic] = append(m.sub[topic], c)
+		return c
+	}
+	m.sub[topic] = []chan []byte{c}
+	m.client.Subscribe(
+		&libmqtt.Topic{Name: topic},
+	)
+	return c
 }
