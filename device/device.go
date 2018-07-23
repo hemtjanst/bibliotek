@@ -1,6 +1,7 @@
 package device
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/hemtjanst/bibliotek/feature"
@@ -30,16 +31,22 @@ func (d *device) Manufacturer() string { return d.info.Manufacturer }
 func (d *device) Model() string        { return d.info.Model }
 func (d *device) SerialNumber() string { return d.info.SerialNumber }
 func (d *device) Type() string         { return d.info.Type }
+func (d *device) Exists() bool         { return true }
 
-func (d *device) Features() map[string]feature.Feature {
-	return d.features
+func (d *device) Features() []feature.Feature {
+	var fts []feature.Feature
+	for _, ft := range d.features {
+		fts = append(fts, ft)
+	}
+	return fts
 }
 
 func (d *device) Feature(name string) feature.Feature {
 	if ft, ok := d.features[name]; ok {
 		return ft
 	}
-	return nil
+	err := errors.New("feature not found")
+	return &feature.Fake{FeatureName: name, Err: err}
 }
 
 type Device interface {
@@ -50,6 +57,8 @@ type Device interface {
 	SerialNumber() string
 	Type() string
 	Feature(name string) feature.Feature
+	Exists() bool
+	Features() []feature.Feature
 }
 
 type DeviceTransporter interface {

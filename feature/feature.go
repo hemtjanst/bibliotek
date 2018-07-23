@@ -13,10 +13,11 @@ type Feature interface {
 	Min() int
 	Max() int
 	Step() int
-	Set(string)
-	Update(string)
-	OnSet() chan string
-	OnUpdate() chan string
+	Set(string) error
+	Update(string) error
+	OnSet() (chan string, error)
+	OnUpdate() (chan string, error)
+	Exists() bool
 }
 
 type FeatureTransporter interface {
@@ -43,16 +44,19 @@ func (f *feature) Name() string { return f.name }
 func (f *feature) Min() int     { return f.info.Min }
 func (f *feature) Max() int     { return f.info.Max }
 func (f *feature) Step() int    { return f.info.Step }
+func (f *feature) Exists() bool { return true }
 
-func (f *feature) Update(s string) {
+func (f *feature) Update(s string) error {
 	f.transporter.UpdateFeature(f.info, []byte(s))
+	return nil
 }
 
-func (f *feature) Set(s string) {
+func (f *feature) Set(s string) error {
 	f.transporter.SetFeature(f.info, []byte(s))
+	return nil
 }
 
-func (f *feature) OnUpdate() chan string {
+func (f *feature) OnUpdate() (chan string, error) {
 	res := f.transporter.SubscribeFeature(f.info.GetTopic)
 	ch := make(chan string, 5)
 	go func() {
@@ -65,10 +69,10 @@ func (f *feature) OnUpdate() chan string {
 			ch <- string(msg)
 		}
 	}()
-	return ch
+	return ch, nil
 }
 
-func (f *feature) OnSet() chan string {
+func (f *feature) OnSet() (chan string, error) {
 	res := f.transporter.SubscribeFeature(f.info.SetTopic)
 	ch := make(chan string, 5)
 	go func() {
@@ -81,5 +85,5 @@ func (f *feature) OnSet() chan string {
 			ch <- string(msg)
 		}
 	}()
-	return ch
+	return ch, nil
 }

@@ -39,6 +39,7 @@ func TestCreateFeature(t *testing.T) {
 	assert.Equal(t, 0, f.Min())
 	assert.Equal(t, 10, f.Max())
 	assert.Equal(t, 1, f.Step())
+	assert.True(t, f.Exists())
 }
 
 func TestFeatureTransporter(t *testing.T) {
@@ -53,13 +54,16 @@ func TestFeatureTransporter(t *testing.T) {
 
 	f := New("on", info, d)
 	d.On("UpdateFeature", info, []byte("test1")).Return()
-	f.Update("test1")
+	err := f.Update("test1")
+	assert.Nil(t, err)
 	d.On("SetFeature", info, []byte("test2")).Return()
-	f.Set("test2")
+	err = f.Set("test2")
+	assert.Nil(t, err)
 	d.AssertExpectations(t)
 
 	d.On("SubscribeFeature", "test/get").Return()
-	res := f.OnUpdate()
+	res, err := f.OnUpdate()
+	assert.Nil(t, err)
 	d.subChan <- []byte("test3")
 	msg := <-res
 	assert.Equal(t, "test3", msg)
@@ -69,7 +73,8 @@ func TestFeatureTransporter(t *testing.T) {
 	d.AssertExpectations(t)
 
 	d.On("SubscribeFeature", "test/set").Return()
-	res = f.OnSet()
+	res, err = f.OnSet()
+	assert.Nil(t, err)
 	d.subChan <- []byte("test4")
 	msg = <-res
 	assert.Equal(t, "test4", msg)
