@@ -27,15 +27,17 @@ func (m *mqtt) OnAnnounce(p *libmqtt.PublishPacket) {
 		m.RUnlock()
 		return
 	}
+	reachable := m.discoverSent
 	m.RUnlock()
 	dev := &device.Info{}
 	err := json.Unmarshal(p.Payload, dev)
 	if dev.Topic == "" {
 		dev.Topic = p.TopicName[len(announceTopic)+1:]
 	}
-	dev.Reachable = m.discoverSent
+	dev.Reachable = reachable
 	if err != nil {
 		log.Printf("Error in json: %v (packet: %s)", err, string(p.Payload))
+		return
 	}
 	m.deviceState <- dev
 }
