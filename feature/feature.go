@@ -20,23 +20,23 @@ type Feature interface {
 	Exists() bool
 }
 
-type FeatureTransporter interface {
+type Transport interface {
 	SubscribeFeature(string) chan []byte
 	UpdateFeature(*Info, []byte)
 	SetFeature(*Info, []byte)
 }
 
 type feature struct {
-	info        *Info
-	name        string
-	transporter FeatureTransporter
+	info      *Info
+	name      string
+	transport Transport
 }
 
-func New(name string, info *Info, transporter FeatureTransporter) Feature {
+func New(name string, info *Info, transport Transport) Feature {
 	return &feature{
-		name:        name,
-		info:        info,
-		transporter: transporter,
+		name:      name,
+		info:      info,
+		transport: transport,
 	}
 }
 
@@ -47,17 +47,17 @@ func (f *feature) Step() int    { return f.info.Step }
 func (f *feature) Exists() bool { return true }
 
 func (f *feature) Update(s string) error {
-	f.transporter.UpdateFeature(f.info, []byte(s))
+	f.transport.UpdateFeature(f.info, []byte(s))
 	return nil
 }
 
 func (f *feature) Set(s string) error {
-	f.transporter.SetFeature(f.info, []byte(s))
+	f.transport.SetFeature(f.info, []byte(s))
 	return nil
 }
 
 func (f *feature) OnUpdate() (chan string, error) {
-	res := f.transporter.SubscribeFeature(f.info.GetTopic)
+	res := f.transport.SubscribeFeature(f.info.GetTopic)
 	ch := make(chan string, 5)
 	go func() {
 		for {
@@ -73,7 +73,7 @@ func (f *feature) OnUpdate() (chan string, error) {
 }
 
 func (f *feature) OnSet() (chan string, error) {
-	res := f.transporter.SubscribeFeature(f.info.SetTopic)
+	res := f.transport.SubscribeFeature(f.info.SetTopic)
 	ch := make(chan string, 5)
 	go func() {
 		for {
