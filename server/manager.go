@@ -12,7 +12,7 @@ import (
 type Transport interface {
 	// DeviceState receives a device.Info on announce, leave or update
 	DeviceState() chan *device.Info
-	device.DeviceTransporter
+	device.Transport
 }
 
 // Manager holds all the devices and deals with updating device
@@ -60,7 +60,7 @@ func (m *Manager) HasDevice(topic string) bool {
 }
 
 func (m *Manager) AddDevice(d *device.Info) {
-	dev, err := device.New(d, m.transport)
+	dev, err := device.NewServer(d, m.transport)
 	if err != nil {
 		log.Printf("Failed to create device: %v", err)
 		return

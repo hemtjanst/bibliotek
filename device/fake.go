@@ -25,12 +25,12 @@ func (f *Fake) SerialNumber() string {
 func (f *Fake) Type() string {
 	return "fake"
 }
-func (f *Fake) Feature(name string) feature.Feature {
+func (f *Fake) Feature(name string) feature.Server {
 	return &feature.Fake{Err: f.Err, FeatureName: name}
 }
 func (f *Fake) Exists() bool {
 	return false
 }
-func (f *Fake) Features() []feature.Feature {
-	return []feature.Feature{}
+func (f *Fake) Features() []feature.Server {
+	return []feature.Server{}
 }
