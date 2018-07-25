@@ -8,16 +8,38 @@ type Info struct {
 	SetTopic string `json:"setTopic,omitempty"`
 }
 
-type Feature interface {
+type iFeature interface {
 	Name() string
 	Min() int
 	Max() int
 	Step() int
+	Exists() bool
+}
+
+type iServer interface {
 	Set(string) error
+	OnUpdate() (chan string, error)
+}
+
+type iClient interface {
 	Update(string) error
 	OnSet() (chan string, error)
-	OnUpdate() (chan string, error)
-	Exists() bool
+}
+
+type Feature interface {
+	iFeature
+	iClient
+	iServer
+}
+
+type Server interface {
+	iFeature
+	iServer
+}
+
+type Client interface {
+	iFeature
+	iClient
 }
 
 type Transport interface {
