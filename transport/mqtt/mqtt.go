@@ -17,6 +17,8 @@ type mqtt struct {
 	addr          string
 	initCh        chan error
 	sub           map[string][]chan []byte
+	discoverSub   []chan struct{}
+	discoverSeen  bool
 	discoverSent  bool
 	discoverDelay time.Duration
 	sync.RWMutex
@@ -78,6 +80,30 @@ func (m *mqtt) init(ctx context.Context, client mqttClient) (err error) {
 		go func() {
 			<-ctx.Done()
 			m.client.Destroy(false)
+			m.Lock()
+			dsub := m.discoverSub
+			m.discoverSub = []chan struct{}{}
+			subs := m.sub
+			m.sub = map[string][]chan []byte{}
+			stateCh := m.deviceState
+			m.deviceState = nil
+			m.Unlock()
+
+			if stateCh != nil {
+				close(stateCh)
+			}
+
+			for _, ch := range dsub {
+				close(ch)
+			}
+
+			if subs != nil {
+				for _, chans := range subs {
+					for _, ch := range chans {
+						close(ch)
+					}
+				}
+			}
 		}()
 	}
 
@@ -162,5 +188,12 @@ func (m *mqtt) Subscribe(topic string) chan []byte {
 }
 
 func (m *mqtt) Discover() chan struct{} {
-	return make(chan struct{}, 5)
+	m.Lock()
+	defer m.Unlock()
+	ch := make(chan struct{}, 5)
+	m.discoverSub = append(m.discoverSub, ch)
+	if m.discoverSeen {
+		ch <- struct{}{}
+	}
+	return ch
 }

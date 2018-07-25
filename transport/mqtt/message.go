@@ -47,7 +47,18 @@ func (m *mqtt) OnLeave(p *libmqtt.PublishPacket) {
 }
 
 func (m *mqtt) OnDiscover(p *libmqtt.PublishPacket) {
-
+	m.RLock()
+	chans := m.discoverSub
+	seen := m.discoverSeen
+	m.RUnlock()
+	if !seen {
+		m.Lock()
+		m.discoverSeen = true
+		m.Unlock()
+	}
+	for _, ch := range chans {
+		ch <- struct{}{}
+	}
 }
 
 func (m *mqtt) OnFeature(p *libmqtt.PublishPacket) {
