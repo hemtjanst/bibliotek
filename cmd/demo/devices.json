@@ -3,30 +3,35 @@
     {
       "topic": "demo/light0",
       "name": "Party Light",
+      "type": "lightbulb",
       "feature": {"on": {}, "brightness": {}, "color": {}},
       "init": {"on": "1", "brightness": "55", "color": "#00ff00"}
     },
     {
       "topic": "demo/light1",
       "name": "Bright Light",
+      "type": "lightbulb",
       "feature": {"on": {}, "brightness": {}},
       "init": {"on": "1", "brightness": "100"}
     },
     {
       "topic": "demo/light2",
       "name": "Warm Light",
+      "type": "lightbulb",
       "feature": {"on": {}, "brightness": {}, "colorTemperature": {}},
       "init": {"on": "1", "brightness": "33", "colorTemperature": "400"}
     },
     {
       "topic": "demo/outlet0",
       "name": "Simple outlet",
+      "type": "outlet",
       "feature": {"on": {}, "outletInUse": {}},
       "init": {"on": "1", "outletInUse": "1"}
     },
     {
-      "topic": "demo/outlet0",
+      "topic": "demo/outlet1",
       "name": "Metered outlet",
+      "type": "outlet",
       "feature": {"on": {}, "outletInUse": {}, "currentPower": {}},
       "init": {"on": "1", "outletInUse": "1", "currentPower": "42"}
     }

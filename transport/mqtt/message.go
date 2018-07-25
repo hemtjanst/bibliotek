@@ -82,3 +82,52 @@ func (m *mqtt) DeviceState() chan *device.Info {
 	}
 	return m.deviceState
 }
+
+func (m *mqtt) PublishMeta(topic string, payload []byte) {
+	m.client.Publish(
+		&libmqtt.PublishPacket{
+			TopicName: announceTopic + "/" + topic,
+			Payload:   payload,
+			IsRetain:  true,
+		},
+	)
+}
+
+func (m *mqtt) Publish(topic string, payload []byte, retain bool) {
+	m.client.Publish(
+		&libmqtt.PublishPacket{
+			TopicName: topic,
+			Payload:   payload,
+			IsRetain:  retain,
+		},
+	)
+}
+func (m *mqtt) Subscribe(topic string) chan []byte {
+	m.Lock()
+	defer m.Unlock()
+	c := make(chan []byte, 5)
+
+	if _, ok := m.sub[topic]; ok {
+		m.sub[topic] = append(m.sub[topic], c)
+		return c
+	}
+	m.sub[topic] = []chan []byte{c}
+	m.client.Subscribe(
+		&libmqtt.Topic{Name: topic},
+	)
+	return c
+}
+
+func (m *mqtt) Discover() chan struct{} {
+	m.Lock()
+	defer m.Unlock()
+	ch := make(chan struct{}, 5)
+	m.discoverSub = append(m.discoverSub, ch)
+	if m.discoverSeen {
+		ch <- struct{}{}
+	}
+	if len(m.discoverSub) == 1 {
+		m.client.Subscribe(&libmqtt.Topic{Name: discoverTopic})
+	}
+	return ch
+}

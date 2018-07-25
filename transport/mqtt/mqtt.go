@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"fmt"
 	"github.com/goiiot/libmqtt"
 	"github.com/hemtjanst/bibliotek/device"
 )
@@ -113,6 +114,11 @@ func (m *mqtt) init(ctx context.Context, client mqttClient) (err error) {
 func (m *mqtt) onConnect(server string, code byte, err error) {
 	m.Lock()
 	defer m.Unlock()
+
+	if code != libmqtt.CodeSuccess && err == nil {
+		err = fmt.Errorf("error code %d", int(code))
+	}
+
 	if m.initCh != nil {
 		if err != nil {
 			m.initCh <- err
@@ -150,50 +156,4 @@ func (m *mqtt) sendDiscover() {
 			Payload:   []byte("1"),
 		})
 	})
-}
-
-func (m *mqtt) PublishMeta(topic string, payload []byte) {
-	m.client.Publish(
-		&libmqtt.PublishPacket{
-			TopicName: announceTopic + "/" + topic,
-			Payload:   payload,
-			IsRetain:  true,
-		},
-	)
-}
-
-func (m *mqtt) Publish(topic string, payload []byte, retain bool) {
-	m.client.Publish(
-		&libmqtt.PublishPacket{
-			TopicName: topic,
-			Payload:   payload,
-			IsRetain:  retain,
-		},
-	)
-}
-func (m *mqtt) Subscribe(topic string) chan []byte {
-	m.Lock()
-	defer m.Unlock()
-	c := make(chan []byte, 5)
-
-	if _, ok := m.sub[topic]; ok {
-		m.sub[topic] = append(m.sub[topic], c)
-		return c
-	}
-	m.sub[topic] = []chan []byte{c}
-	m.client.Subscribe(
-		&libmqtt.Topic{Name: topic},
-	)
-	return c
-}
-
-func (m *mqtt) Discover() chan struct{} {
-	m.Lock()
-	defer m.Unlock()
-	ch := make(chan struct{}, 5)
-	m.discoverSub = append(m.discoverSub, ch)
-	if m.discoverSeen {
-		ch <- struct{}{}
-	}
-	return ch
 }

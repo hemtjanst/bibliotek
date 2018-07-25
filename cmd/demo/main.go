@@ -68,10 +68,12 @@ func main() {
 		// Loop through the features of the newly created device
 		for _, ft := range d.Features() {
 			wg.Add(1)
+			// fix mutation
+			ft := ft
+			d := d
 			// Set up a goroutine per feature that listens for set commands
 			go func() {
 				defer wg.Done()
-				ft := ft // fix mutation
 				sch, _ := ft.OnSet()
 				for {
 					select {
@@ -82,6 +84,7 @@ func main() {
 						// Echo back whatever value was received as
 						// an update.
 						ft.Update(nv)
+						log.Printf("OnSet(%s(%s), %s) = %s", d.Id(), d.Name(), ft.Name(), nv)
 					case <-ctx.Done():
 						return
 					}
