@@ -20,9 +20,9 @@ type Info struct {
 }
 
 type device struct {
-	info        *Info
-	features    map[string]feature.Feature
-	transporter DeviceTransporter
+	info      *Info
+	features  map[string]feature.Feature
+	transport Transport
 }
 
 func (d *device) Id() string           { return d.info.Topic }
@@ -33,15 +33,7 @@ func (d *device) SerialNumber() string { return d.info.SerialNumber }
 func (d *device) Type() string         { return d.info.Type }
 func (d *device) Exists() bool         { return true }
 
-func (d *device) Features() []feature.Feature {
-	var fts []feature.Feature
-	for _, ft := range d.features {
-		fts = append(fts, ft)
-	}
-	return fts
-}
-
-func (d *device) Feature(name string) feature.Feature {
+func (d *device) getFeature(name string) feature.Feature {
 	if ft, ok := d.features[name]; ok {
 		return ft
 	}
@@ -49,48 +41,25 @@ func (d *device) Feature(name string) feature.Feature {
 	return &feature.Fake{FeatureName: name, Err: err}
 }
 
-type Device interface {
-	Id() string
-	Name() string
-	Manufacturer() string
-	Model() string
-	SerialNumber() string
-	Type() string
-	Feature(name string) feature.Feature
-	Exists() bool
-	Features() []feature.Feature
-}
-
-type DeviceTransporter interface {
-	Publish(topic string, payload []byte, retain bool)
-	Subscribe(topic string) chan []byte
-}
-
-func New(info *Info, transporter DeviceTransporter) (Device, error) {
-	if info == nil {
-		return nil, fmt.Errorf("cannot create device without info")
+func create(d *device) error {
+	if d.info == nil {
+		return fmt.Errorf("cannot create device without info")
 	}
-	if info.Topic == "" {
-		return nil, fmt.Errorf("cannot have a device info with an empty topic")
+	if d.info.Topic == "" {
+		return fmt.Errorf("cannot have a device info with an empty topic")
 	}
 
-	d := &device{
-		info:        info,
-		features:    map[string]feature.Feature{},
-		transporter: transporter,
-	}
-
-	if info.Features != nil {
-		for name, ft := range info.Features {
+	if d.info.Features != nil {
+		for name, ft := range d.info.Features {
 			if ft.GetTopic == "" {
-				ft.GetTopic = info.Topic + "/" + name + "/get"
+				ft.GetTopic = d.info.Topic + "/" + name + "/get"
 			}
 			if ft.SetTopic == "" {
-				ft.SetTopic = info.Topic + "/" + name + "/set"
+				ft.SetTopic = d.info.Topic + "/" + name + "/set"
 			}
 			d.features[name] = feature.New(name, ft, d)
 		}
 	}
 
-	return d, nil
+	return nil
 }
