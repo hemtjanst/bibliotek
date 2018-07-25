@@ -27,13 +27,22 @@ func New(ctx context.Context, addr string) (m *mqtt, err error) {
 		addr:          addr,
 		discoverDelay: 5 * time.Second,
 	}
-	client, err := libmqtt.NewClient(
-		libmqtt.WithServer(addr),
+	opts := []libmqtt.Option{
 		libmqtt.WithKeepalive(10, 1.2),
 		libmqtt.WithLog(libmqtt.Silent),
 		libmqtt.WithRouter(newRouter(m)),
 		libmqtt.WithDialTimeout(5),
-	)
+	}
+	if addr != "" {
+		opts = append(opts, libmqtt.WithServer(addr))
+	}
+	moreOpts, err := flagOpts()
+	if err != nil {
+		return nil, err
+	}
+	opts = append(opts, moreOpts...)
+
+	client, err := libmqtt.NewClient(opts...)
 	if err != nil {
 		m = nil
 		return
