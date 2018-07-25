@@ -19,7 +19,7 @@ type Transport interface {
 // state as it receives it from the transport
 type Manager struct {
 	transport Transport
-	devices   map[string]device.Device
+	devices   map[string]Device
 	waitingOn map[string]chan struct{}
 	sync.RWMutex
 }
@@ -28,7 +28,7 @@ type Manager struct {
 func New(t Transport) *Manager {
 	return &Manager{
 		transport: t,
-		devices:   map[string]device.Device{},
+		devices:   map[string]Device{},
 		waitingOn: map[string]chan struct{}{},
 	}
 }
@@ -60,7 +60,7 @@ func (m *Manager) HasDevice(topic string) bool {
 }
 
 func (m *Manager) AddDevice(d *device.Info) {
-	dev, err := device.NewServer(d, m.transport)
+	dev, err := NewDevice(d, m.transport)
 	if err != nil {
 		log.Printf("Failed to create device: %v", err)
 		return
@@ -73,27 +73,27 @@ func (m *Manager) AddDevice(d *device.Info) {
 	}
 }
 
-func (m *Manager) Device(topic string) device.Device {
+func (m *Manager) Device(topic string) Device {
 	if m.HasDevice(topic) {
 		m.RLock()
 		defer m.RUnlock()
 		return m.devices[topic]
 	}
 	err := errors.New("device not found")
-	return &device.Fake{Topic: topic, Err: err}
+	return &FakeDevice{Topic: topic, Err: err}
 }
 
-func (m *Manager) Devices() []device.Device {
+func (m *Manager) Devices() []Device {
 	m.RLock()
 	defer m.RUnlock()
-	var devs []device.Device
+	var devs []Device
 	for _, dev := range m.devices {
 		devs = append(devs, dev)
 	}
 	return devs
 }
 
-func (m *Manager) WaitForDevice(topic string, ctx context.Context) device.Device {
+func (m *Manager) WaitForDevice(topic string, ctx context.Context) Device {
 	if m.HasDevice(topic) {
 		m.RLock()
 		defer m.RUnlock()
@@ -113,6 +113,6 @@ func (m *Manager) WaitForDevice(topic string, ctx context.Context) device.Device
 	case <-ch:
 		return m.Device(topic)
 	case <-ctx.Done():
-		return &device.Fake{Err: errors.New("context cancelled"), Topic: topic}
+		return &FakeDevice{Err: errors.New("context cancelled"), Topic: topic}
 	}
 }

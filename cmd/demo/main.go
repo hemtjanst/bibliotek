@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"github.com/hemtjanst/bibliotek/client"
 	"github.com/hemtjanst/bibliotek/device"
 	"github.com/hemtjanst/bibliotek/transport/mqtt"
 	"io/ioutil"
@@ -58,7 +59,7 @@ func main() {
 	// Loop through config and create the devices
 	wg := sync.WaitGroup{}
 	for _, info := range c.Devices {
-		d, err := device.NewClient(info.Info, tr)
+		d, err := client.NewDevice(info.Info, tr)
 		if err != nil {
 			log.Printf("Error creating device: %v", err)
 			continue

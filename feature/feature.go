@@ -20,26 +20,6 @@ type Feature interface {
 	OnSet() (chan string, error)
 }
 
-type Server interface {
-	Name() string
-	Min() int
-	Max() int
-	Step() int
-	Exists() bool
-	Set(string) error
-	OnUpdate() (chan string, error)
-}
-
-type Client interface {
-	Name() string
-	Min() int
-	Max() int
-	Step() int
-	Exists() bool
-	Update(string) error
-	OnSet() (chan string, error)
-}
-
 type Transport interface {
 	SubscribeFeature(string) chan []byte
 	UpdateFeature(*Info, []byte)

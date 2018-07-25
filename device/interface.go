@@ -1,7 +1,7 @@
 package device
 
 // Device contains the common functions for Client and Server
-type Device interface {
+type Common interface {
 	// Id will return the unique id of the device.
 	// This is currently always the same as the topic name.
 	Id() string
