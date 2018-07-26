@@ -27,6 +27,9 @@ type Device interface {
 // The transport is responsible for closing the channel, at that point the
 // goroutine will stop.
 func NewDevice(info *device.Info, transport device.Transport) (Device, error) {
+	if info.LastWillID == "" {
+		info.LastWillID = transport.LastWillID()
+	}
 	d := &clientDev{
 		Device: device.Device{
 			Info:      info,

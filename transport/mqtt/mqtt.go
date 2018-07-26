@@ -9,7 +9,10 @@ import (
 
 	"fmt"
 	"github.com/goiiot/libmqtt"
+	"github.com/google/uuid"
 	"github.com/hemtjanst/bibliotek/device"
+	"os"
+	"path"
 )
 
 type mqtt struct {
@@ -18,6 +21,7 @@ type mqtt struct {
 	addr          string
 	initCh        chan error
 	sub           map[string][]chan []byte
+	willID        string
 	discoverSub   []chan struct{}
 	discoverSeen  bool
 	discoverSent  bool
@@ -26,15 +30,28 @@ type mqtt struct {
 }
 
 func New(ctx context.Context, addr string) (m *mqtt, err error) {
+	var id string
+	if len(os.Args) > 0 && len(os.Args[0]) > 0 {
+		// Use executable name as first part of id
+		id = path.Base(os.Args[0])
+	} else {
+		id = "htlib"
+	}
+	id = id + "-" + uuid.New().String()
+
 	m = &mqtt{
 		addr:          addr,
 		discoverDelay: 5 * time.Second,
+		willID:        id,
 	}
+
 	opts := []libmqtt.Option{
 		libmqtt.WithKeepalive(10, 1.2),
 		libmqtt.WithLog(libmqtt.Silent),
 		libmqtt.WithRouter(newRouter(m)),
 		libmqtt.WithDialTimeout(5),
+		libmqtt.WithWill(leaveTopic, 0, false, []byte(m.willID)),
+		libmqtt.WithClientID(id),
 	}
 	if addr != "" {
 		opts = append(opts, libmqtt.WithServer(addr))
@@ -156,4 +173,8 @@ func (m *mqtt) sendDiscover() {
 			Payload:   []byte("1"),
 		})
 	})
+}
+
+func (m *mqtt) LastWillID() string {
+	return m.willID
 }

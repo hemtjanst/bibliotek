@@ -27,4 +27,5 @@ type Transport interface {
 	Subscribe(topic string) chan []byte
 	Discover() chan struct{}
 	PublishMeta(topic string, payload []byte)
+	LastWillID() string
 }
