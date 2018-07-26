@@ -27,15 +27,16 @@ func (r *mqttRouter) Handle(topic string, h libmqtt.TopicHandler) {
 
 // Dispatch defines the action to dispatch published packet
 func (r *mqttRouter) Dispatch(p *libmqtt.PublishPacket) {
-	if p.TopicName == leaveTopic {
+	if p.TopicName == r.handler.TopicName(TypeLeave) {
 		r.handler.OnLeave(p)
 		return
 	}
-	if p.TopicName == discoverTopic {
+	if p.TopicName == r.handler.TopicName(TypeDiscover) {
 		r.handler.OnDiscover(p)
 		return
 	}
-	if p.TopicName == announceTopic || strings.HasPrefix(p.TopicName, announceTopic+"/") {
+	anTopic := r.handler.TopicName(TypeAnnounce)
+	if p.TopicName == anTopic || strings.HasPrefix(p.TopicName, anTopic+"/") {
 		r.handler.OnAnnounce(p)
 		return
 	}

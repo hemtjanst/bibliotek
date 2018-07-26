@@ -26,8 +26,8 @@ func TestMessage(t *testing.T) {
 	}
 
 	client.On("Connect", mock.Anything).Return()
-	client.On("Publish", discoverTopic).Return()
-	client.On("Subscribe", announceTopic+"/#").Return()
+	client.On("Publish", "discover").Return()
+	client.On("Subscribe", "announce/#").Return()
 	err := cl.init(nil, client)
 	assert.Nil(t, err)
 

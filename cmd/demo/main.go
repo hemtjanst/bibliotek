@@ -37,7 +37,7 @@ type Config struct {
 
 func main() {
 	// Set up flags
-	mqtt.Flags(flag.String, flag.Bool)
+	mCfg := mqtt.MustFlags(flag.String, flag.Bool)
 	flag.Parse()
 
 	// Set up context and signal interrupts
@@ -51,7 +51,7 @@ func main() {
 	}
 
 	// Create transport
-	tr, err := mqtt.New(ctx, "")
+	tr, err := mqtt.New(ctx, mCfg())
 	if err != nil {
 		log.Fatal(err)
 	}

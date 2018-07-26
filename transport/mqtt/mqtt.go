@@ -9,10 +9,7 @@ import (
 
 	"fmt"
 	"github.com/goiiot/libmqtt"
-	"github.com/google/uuid"
 	"github.com/hemtjanst/bibliotek/device"
-	"os"
-	"path"
 )
 
 type mqtt struct {
@@ -26,41 +23,30 @@ type mqtt struct {
 	discoverSeen  bool
 	discoverSent  bool
 	discoverDelay time.Duration
+	announceTopic string
+	discoverTopic string
+	leaveTopic    string
 	sync.RWMutex
 }
 
-func New(ctx context.Context, addr string) (m *mqtt, err error) {
-	var id string
-	if len(os.Args) > 0 && len(os.Args[0]) > 0 {
-		// Use executable name as first part of id
-		id = path.Base(os.Args[0])
-	} else {
-		id = "htlib"
+func New(ctx context.Context, c *Config) (m *mqtt, err error) {
+	if c == nil {
+		return nil, ErrNoConfig
 	}
-	id = id + "-" + uuid.New().String()
-
+	if err = c.check(); err != nil {
+		return
+	}
 	m = &mqtt{
-		addr:          addr,
-		discoverDelay: 5 * time.Second,
-		willID:        id,
+		discoverDelay: c.DiscoverDelay,
+		willID:        c.ClientID,
+		announceTopic: c.AnnounceTopic,
+		discoverTopic: c.DiscoverTopic,
+		leaveTopic:    c.LeaveTopic,
 	}
-
 	opts := []libmqtt.Option{
-		libmqtt.WithKeepalive(10, 1.2),
-		libmqtt.WithLog(libmqtt.Silent),
 		libmqtt.WithRouter(newRouter(m)),
-		libmqtt.WithDialTimeout(5),
-		libmqtt.WithWill(leaveTopic, 0, false, []byte(m.willID)),
-		libmqtt.WithClientID(id),
 	}
-	if addr != "" {
-		opts = append(opts, libmqtt.WithServer(addr))
-	}
-	moreOpts, err := flagOpts()
-	if err != nil {
-		return nil, err
-	}
-	opts = append(opts, moreOpts...)
+	opts = append(opts, c.opts()...)
 
 	client, err := libmqtt.NewClient(opts...)
 	if err != nil {
@@ -81,6 +67,19 @@ func (m *mqtt) init(ctx context.Context, client mqttClient) (err error) {
 		m.Unlock()
 		return errors.New("already initialized")
 	}
+	if m.announceTopic == "" {
+		m.announceTopic = "announce"
+	}
+	if m.discoverTopic == "" {
+		m.discoverTopic = "discover"
+	}
+	if m.leaveTopic == "" {
+		m.leaveTopic = "leave"
+	}
+	if m.discoverDelay == 0 {
+		m.discoverDelay = 5 * time.Second
+	}
+
 	m.initCh = make(chan error)
 	m.sub = map[string][]chan []byte{}
 	m.client = client
@@ -162,13 +161,13 @@ func (m *mqtt) onConnect(server string, code byte, err error) {
 
 func (m *mqtt) sendDiscover() {
 	m.discoverSent = false
-	m.client.Subscribe(&libmqtt.Topic{Name: announceTopic + "/#"})
+	m.client.Subscribe(&libmqtt.Topic{Name: m.announceTopic + "/#"})
 	time.AfterFunc(m.discoverDelay, func() {
 		m.Lock()
 		defer m.Unlock()
 		m.discoverSent = true
 		m.client.Publish(&libmqtt.PublishPacket{
-			TopicName: discoverTopic,
+			TopicName: m.discoverTopic,
 			IsRetain:  true,
 			Payload:   []byte("1"),
 		})

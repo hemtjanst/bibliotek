@@ -8,18 +8,21 @@ import (
 	"github.com/hemtjanst/bibliotek/device"
 )
 
+type EventType int
+
+const (
+	TypeAnnounce EventType = iota
+	TypeDiscover
+	TypeLeave
+)
+
 type MessageHandler interface {
 	OnAnnounce(p *libmqtt.PublishPacket)
 	OnLeave(p *libmqtt.PublishPacket)
 	OnDiscover(p *libmqtt.PublishPacket)
 	OnFeature(p *libmqtt.PublishPacket)
+	TopicName(t EventType) string
 }
-
-const (
-	announceTopic = "announce"
-	leaveTopic    = "leave"
-	discoverTopic = "discover"
-)
 
 func (m *mqtt) OnAnnounce(p *libmqtt.PublishPacket) {
 	m.RLock()
@@ -32,7 +35,7 @@ func (m *mqtt) OnAnnounce(p *libmqtt.PublishPacket) {
 	dev := &device.Info{}
 	err := json.Unmarshal(p.Payload, dev)
 	if dev.Topic == "" {
-		dev.Topic = p.TopicName[len(announceTopic)+1:]
+		dev.Topic = p.TopicName[len(m.announceTopic)+1:]
 	}
 	dev.Reachable = reachable
 	if err != nil {
@@ -72,6 +75,19 @@ func (m *mqtt) OnFeature(p *libmqtt.PublishPacket) {
 	}
 }
 
+func (m *mqtt) TopicName(t EventType) string {
+	switch t {
+	case TypeAnnounce:
+		return m.announceTopic
+	case TypeDiscover:
+		return m.discoverTopic
+	case TypeLeave:
+		return m.leaveTopic
+	default:
+		return ""
+	}
+}
+
 // DeviceState returns a channel which publishes information about new and changed devices
 func (m *mqtt) DeviceState() chan *device.Info {
 	m.Lock()
@@ -86,7 +102,7 @@ func (m *mqtt) DeviceState() chan *device.Info {
 func (m *mqtt) PublishMeta(topic string, payload []byte) {
 	m.client.Publish(
 		&libmqtt.PublishPacket{
-			TopicName: announceTopic + "/" + topic,
+			TopicName: m.announceTopic + "/" + topic,
 			Payload:   payload,
 			IsRetain:  true,
 		},
@@ -127,7 +143,7 @@ func (m *mqtt) Discover() chan struct{} {
 		ch <- struct{}{}
 	}
 	if len(m.discoverSub) == 1 {
-		m.client.Subscribe(&libmqtt.Topic{Name: discoverTopic})
+		m.client.Subscribe(&libmqtt.Topic{Name: m.discoverTopic})
 	}
 	return ch
 }

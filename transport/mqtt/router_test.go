@@ -12,6 +12,18 @@ func (h *MockMessageHandler) OnDiscover(p *libmqtt.PublishPacket) { h.Called(p.T
 func (h *MockMessageHandler) OnAnnounce(p *libmqtt.PublishPacket) { h.Called(p.TopicName) }
 func (h *MockMessageHandler) OnLeave(p *libmqtt.PublishPacket)    { h.Called(p.TopicName) }
 func (h *MockMessageHandler) OnFeature(p *libmqtt.PublishPacket)  { h.Called(p.TopicName) }
+func (m *MockMessageHandler) TopicName(t EventType) string {
+	switch t {
+	case TypeAnnounce:
+		return "announce"
+	case TypeDiscover:
+		return "discover"
+	case TypeLeave:
+		return "leave"
+	default:
+		return ""
+	}
+}
 
 func TestRouter(t *testing.T) {
 	mockPacket := func(topic string) *libmqtt.PublishPacket {

@@ -24,3 +24,4 @@
 [[constraint]]
   branch = "master"
   name = "github.com/goiiot/libmqtt"
+  source = "github.com/bonan/libmqtt"

@@ -2,20 +2,17 @@ package main
 
 import (
 	"context"
+	"flag"
 	"github.com/hemtjanst/bibliotek/server"
 	"github.com/hemtjanst/bibliotek/transport/mqtt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
-	"flag"
-)
-
-var (
-	flgMqttAddr = flag.String("mqtt.addr", "localhost:1883", "Address to MQTT")
 )
 
 func main() {
+	mCfg := mqtt.MustFlags(flag.String, flag.Bool)
 	flag.Parse()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -28,7 +25,7 @@ func main() {
 		cancel()
 	}()
 
-	mq, err := mqtt.New(ctx, *flgMqttAddr)
+	mq, err := mqtt.New(ctx, mCfg())
 
 	log.Printf("Connected!")
 

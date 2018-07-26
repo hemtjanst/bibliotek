@@ -1,19 +1,10 @@
 package mqtt
 
 import (
-	"github.com/goiiot/libmqtt"
-)
-
-var (
-	flagAddress     *string
-	flagUsername    *string
-	flagPassword    *string
-	flagTLS         *bool
-	flagTLSInsecure *bool
-	flagTLSHostname *string
-	flagCaPath      *string
-	flagCertPath    *string
-	flagKeyPath     *string
+	"crypto/tls"
+	"crypto/x509"
+	"io/ioutil"
+	"log"
 )
 
 // FlagStrFunc is passed to the Flags() function, it is compatible with the standard library
@@ -54,36 +45,98 @@ type FlagBoolFunc func(name string, def bool, usage string) *bool
 //    flag.Parse()
 //    transport, err := mqtt.New(context.TODO(), "")
 //  }
-func Flags(str FlagStrFunc, b FlagBoolFunc) {
+func Flags(str FlagStrFunc, b FlagBoolFunc) func() (*Config, error) {
 	if str == nil || b == nil {
+		return nil
+	}
+	flagAddress := str("mqtt.address", "localhost:1883", "Address to MQTT endpoint")
+	flagUsername := str("mqtt.username", "", "MQTT Username")
+	flagPassword := str("mqtt.password", "", "MQTT Password")
+	flagTLS := b("mqtt.tls", false, "Enable TLS")
+	flagTLSInsecure := b("mqtt.tls-insecure", false, "Disable TLS certificate validation")
+	flagTLSHostname := str("mqtt.cn", "", "Common name of server certificate (usually the hostname)")
+	flagCaPath := str("mqtt.ca", "", "Path to CA certificate")
+	flagCertPath := str("mqtt.cert", "", "Path to Client certificate")
+	flagKeyPath := str("mqtt.key", "", "Path to Client certificate key")
+	flagAnnounceTopic := str("topic.announce", "announce", "Announce topic for Hemtjänst")
+	flagDiscoverTopic := str("topic.discover", "discover", "Discover topic for Hemtjänst")
+	flagLeaveTopic := str("topic.leave", "leave", "Leave topic for hemtjänst")
+
+	return func() (c *Config, err error) {
+		c = &Config{}
+
+		if flagAddress != nil && *flagAddress != "" {
+			c.Address = append(c.Address, *flagAddress)
+		}
+		if flagUsername != nil && *flagUsername != "" {
+			c.Username = *flagUsername
+		}
+		if flagPassword != nil && *flagPassword != "" {
+			c.Password = *flagPassword
+		}
+		if flagTLS != nil && *flagTLS {
+			skipVerify := false
+			certFile := ""
+			keyFile := ""
+			caFile := ""
+			cnName := ""
+
+			if flagTLSInsecure != nil {
+				skipVerify = *flagTLSInsecure
+			}
+			if flagCertPath != nil {
+				certFile = *flagCertPath
+			}
+			if flagKeyPath != nil {
+				keyFile = *flagKeyPath
+			}
+			if flagCaPath != nil {
+				caFile = *flagCaPath
+			}
+			if flagTLSHostname != nil {
+				cnName = *flagTLSHostname
+			}
+
+			b, err := ioutil.ReadFile(caFile)
+			if err != nil {
+				return nil, err
+			}
+			cp := x509.NewCertPool()
+			if !cp.AppendCertsFromPEM(b) {
+				return nil, err
+			}
+			cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+			if err != nil {
+				return nil, err
+			}
+
+			c.TLS = &tls.Config{
+				Certificates:       []tls.Certificate{cert},
+				InsecureSkipVerify: skipVerify,
+				ClientCAs:          cp,
+				ServerName:         cnName,
+			}
+		}
+		if flagAnnounceTopic != nil && *flagAnnounceTopic != "" {
+			c.AnnounceTopic = *flagAnnounceTopic
+		}
+		if flagDiscoverTopic != nil && *flagDiscoverTopic != "" {
+			c.DiscoverTopic = *flagDiscoverTopic
+		}
+		if flagLeaveTopic != nil && *flagLeaveTopic != "" {
+			c.LeaveTopic = *flagLeaveTopic
+		}
 		return
 	}
-	flagAddress = str("mqtt.address", "localhost:1883", "Address to MQTT endpoint")
-	flagUsername = str("mqtt.username", "", "MQTT Username")
-	flagPassword = str("mqtt.password", "", "MQTT Password")
-	flagTLS = b("mqtt.tls", false, "Enable TLS")
-	flagTLSInsecure = b("mqtt.tls-insecure", false, "Disable TLS certificate validation")
-	flagTLSHostname = str("mqtt.cn", "", "Common name of server certificate (usually the hostname)")
-	flagCaPath = str("mqtt.ca", "", "Path to CA certificate")
-	flagCertPath = str("mqtt.cert", "", "Path to Client certificate")
-	flagKeyPath = str("mqtt.key", "", "Path to Client certificate key")
 }
 
-func flagOpts() (o []libmqtt.Option, err error) {
-	if flagAddress != nil && *flagAddress != "" {
-		o = append(o, libmqtt.WithServer(*flagAddress))
+func MustFlags(str FlagStrFunc, b FlagBoolFunc) func() *Config {
+	fn := Flags(str, b)
+	return func() *Config {
+		c, err := fn()
+		if err != nil {
+			log.Fatal(err)
+		}
+		return c
 	}
-	if flagUsername != nil && flagPassword != nil && *flagUsername != "" {
-		o = append(o, libmqtt.WithIdentity(*flagUsername, *flagPassword))
-	}
-	if flagTLS != nil && *flagTLS {
-		o = append(o, libmqtt.WithTLS(
-			*flagCertPath,
-			*flagKeyPath,
-			*flagCaPath,
-			*flagTLSHostname,
-			*flagTLSInsecure,
-		))
-	}
-	return
 }

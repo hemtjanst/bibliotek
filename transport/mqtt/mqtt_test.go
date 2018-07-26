@@ -57,7 +57,6 @@ func TestClient(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	cl := &mqtt{
-		addr:          "127.0.0.1:1883",
 		discoverDelay: 500 * time.Millisecond,
 	}
 
@@ -67,17 +66,17 @@ func TestClient(t *testing.T) {
 	assert.Nil(t, err)
 	client.AssertNotCalled(t, "Subscribe")
 
-	client.On("Subscribe", announceTopic+"/#").Return()
+	client.On("Subscribe", "announce/#").Return()
 	cl.DeviceState()
-	client.AssertCalled(t, "Subscribe", announceTopic+"/#")
+	client.AssertCalled(t, "Subscribe", "announce/#")
 	client.AssertNotCalled(t, "Publish")
-	client.On("Publish", discoverTopic).Return()
+	client.On("Publish", "discover").Return()
 
 	for i := 0; i < 2; i++ {
 		time.Sleep(1 * time.Second)
 		client.AssertNumberOfCalls(t, "Publish", i+1)
 		client.AssertNumberOfCalls(t, "Subscribe", i+1)
-		client.AssertCalled(t, "Publish", discoverTopic)
+		client.AssertCalled(t, "Publish", "discover")
 		client.TriggerReconnect(libmqtt.CodeSuccess, nil)
 	}
 
@@ -98,7 +97,6 @@ func TestClientError(t *testing.T) {
 	defer cancel()
 
 	cl := &mqtt{
-		addr:          "127.0.0.1:1883",
 		discoverDelay: 500 * time.Millisecond,
 	}
 
@@ -115,7 +113,6 @@ func TestPublish(t *testing.T) {
 	}
 
 	cl := &mqtt{
-		addr:          "127.0.0.1:1883",
 		discoverDelay: 500 * time.Millisecond,
 	}
 
@@ -135,7 +132,6 @@ func TestSubscribe(t *testing.T) {
 	}
 
 	cl := &mqtt{
-		addr:          "127.0.0.1:1883",
 		discoverDelay: 500 * time.Millisecond,
 	}
 
