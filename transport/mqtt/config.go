@@ -77,7 +77,7 @@ func (c *Config) opts() (o []libmqtt.Option) {
 	}
 
 	if c.TLS != nil {
-		o = append(o, libmqtt.WithTLSConfig(c.TLS))
+		o = append(o, libmqtt.WithCustomTLS(c.TLS))
 	}
 	if c.Username != "" {
 		o = append(o, libmqtt.WithIdentity(c.Username, c.Password))

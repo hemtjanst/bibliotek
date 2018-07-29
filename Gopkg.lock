@@ -11,8 +11,7 @@
   branch = "master"
   name = "github.com/goiiot/libmqtt"
   packages = ["."]
-  revision = "ebb69d874a776577b6cfe8a459e489e9135c386c"
-  source = "github.com/bonan/libmqtt"
+  revision = "883b6d0f24731b69fe69daecc94cc7076a69dc70"
 
 [[projects]]
   name = "github.com/google/uuid"
@@ -41,6 +40,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c67838210e991b8a66528ede7fd24498a784534f257fd4a5e83019ea2827115b"
+  inputs-digest = "562c8e44874ccbafe53067d2ecea6803fbfc66d2e2326da22cd5ff5fa4f65e95"
   solver-name = "gps-cdcl"
   solver-version = 1
