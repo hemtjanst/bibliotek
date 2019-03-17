@@ -12,5 +12,10 @@ matrix:
     - go: master
 env:
   - GO111MODULE=on
-install: go mod download
+cache:
+  directories:
+    - $HOME/.cache/go-build
+    - $GOPATH/pkg/mod
+before_install: go mod download
+install: go build ./...
 script: go test -race -v $(go list ./...)
