@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/hemtjanst/bibliotek/device"
-	"github.com/hemtjanst/bibliotek/server"
-	"github.com/hemtjanst/bibliotek/transport/mqtt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/hemtjanst/bibliotek/device"
+	"github.com/hemtjanst/bibliotek/server"
+	"github.com/hemtjanst/bibliotek/transport/mqtt"
 )
 
 func main() {
@@ -49,6 +50,15 @@ type handler struct{}
 
 func (h *handler) AddedDevice(dev server.Device) {
 	log.Printf("Device Created: %+v", dev)
+	for _, ft := range dev.Features() {
+		go func(ft server.Feature) {
+			ch, _ := ft.OnUpdate()
+			for {
+				d := <-ch
+				log.Printf("Device: %s feature: %s is now %s", dev.Id(), ft.Name(), d)
+			}
+		}(ft)
+	}
 
 }
 
