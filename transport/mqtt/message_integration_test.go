@@ -24,7 +24,7 @@ func TestDiscover(t *testing.T) {
 	defer cancel()
 
 	ch := mq.Discover()
-	mq.Publish(mq.discoverTopic, []byte("1"), true)
+	mq.Publish("discover", []byte("1"), true)
 	v := <-ch
 	assert.Equal(t, struct{}{}, v)
 }
