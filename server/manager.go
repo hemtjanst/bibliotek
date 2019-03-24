@@ -86,34 +86,29 @@ func (m *Manager) AddDevice(d *device.Info) {
 
 // UpdateDevice updates an existing device with the new info
 func (m *Manager) UpdateDevice(d *device.Info) {
-	upd, err := NewDevice(d, m.transport)
-	if err != nil {
-		log.Printf("Failed to create device: %v", err)
-		return
-	}
 	m.Lock()
 	defer m.Unlock()
 
 	dev := m.devices[d.Topic]
 
-	if upd.Name() != dev.Name() {
-		log.Printf("Device has different Name: current %s, new %s", dev.Name(), upd.Name())
+	if d.Name != dev.Name() {
+		log.Printf("Device has different Name: current %s, new %s", dev.Name(), d.Name)
 		return
 	}
-	if upd.Manufacturer() != dev.Manufacturer() {
-		log.Printf("Device has different Manufacturer: current %s, new %s", dev.Manufacturer(), upd.Manufacturer())
+	if d.Manufacturer != dev.Manufacturer() {
+		log.Printf("Device has different Manufacturer: current %s, new %s", dev.Manufacturer(), d.Manufacturer)
 		return
 	}
-	if upd.Model() != dev.Model() {
-		log.Printf("Device has different Model: current %s, new %s", dev.Model(), upd.Model())
+	if d.Model != dev.Model() {
+		log.Printf("Device has different Model: current %s, new %s", dev.Model(), d.Model)
 		return
 	}
-	if upd.SerialNumber() != dev.SerialNumber() {
-		log.Printf("Device has different SerialNumber: current %s, new %s", dev.SerialNumber(), upd.SerialNumber())
+	if d.SerialNumber != dev.SerialNumber() {
+		log.Printf("Device has different SerialNumber: current %s, new %s", dev.SerialNumber(), d.SerialNumber)
 		return
 	}
-	if upd.Type() != dev.Type() {
-		log.Printf("Device has different Type: current %s, new %s", dev.Type(), upd.Type())
+	if d.Type != dev.Type() {
+		log.Printf("Device has different Type: current %s, new %s", dev.Type(), d.Type)
 		return
 	}
 
