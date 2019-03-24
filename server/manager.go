@@ -54,7 +54,10 @@ func (m *Manager) Start(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return nil
-		case d := <-m.transport.DeviceState():
+		case d, open := <-m.transport.DeviceState():
+			if !open {
+				return nil
+			}
 			switch d.Action {
 			case device.DeleteAction:
 				m.removeDevice(d.Topic)
