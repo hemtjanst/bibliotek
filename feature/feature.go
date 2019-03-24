@@ -115,13 +115,19 @@ func (f *feature) OnUpdate() (chan string, error) {
 	res := f.transport.SubscribeFeature(f.info.GetTopic)
 	ch := make(chan string, 5)
 	go func() {
+		var value string
 		for {
 			msg, open := <-res
 			if !open {
 				close(ch)
 				return
 			}
-			ch <- string(msg)
+			smsg := string(msg)
+			if value == smsg {
+				continue
+			}
+			value = smsg
+			ch <- smsg
 		}
 	}()
 	return ch, nil
