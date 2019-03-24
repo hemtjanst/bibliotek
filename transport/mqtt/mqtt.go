@@ -13,11 +13,12 @@ import (
 )
 
 type mqtt struct {
-	deviceState   chan *device.Info
+	deviceState   chan *device.State
 	client        mqttClient
 	addr          string
 	initCh        chan error
 	sub           map[string][]chan []byte
+	willMap       map[string][]string
 	willID        string
 	discoverSub   []chan struct{}
 	discoverSeen  bool
@@ -42,6 +43,7 @@ func New(ctx context.Context, c *Config) (m *mqtt, err error) {
 		announceTopic: c.AnnounceTopic,
 		discoverTopic: c.DiscoverTopic,
 		leaveTopic:    c.LeaveTopic,
+		willMap:       map[string][]string{},
 	}
 	opts := []libmqtt.Option{
 		libmqtt.WithRouter(newRouter(m)),

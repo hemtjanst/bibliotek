@@ -11,7 +11,7 @@ import (
 
 type Transport interface {
 	// DeviceState receives a device.Info on announce, leave or update
-	DeviceState() chan *device.Info
+	DeviceState() chan *device.State
 	device.Transport
 }
 
@@ -41,12 +41,12 @@ func (m *Manager) Start(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case d := <-m.transport.DeviceState():
-			log.Printf("Device State: %v", d)
-			if !d.Reachable {
+			log.Printf("Device State: %+v", d)
+			if d.Device == nil {
 				continue
 			}
 			if !m.HasDevice(d.Topic) {
-				m.AddDevice(d)
+				m.AddDevice(d.Device)
 			}
 		}
 	}
@@ -70,6 +70,7 @@ func (m *Manager) AddDevice(d *device.Info) {
 	m.devices[d.Topic] = dev
 	if ch, ok := m.waitingOn[d.Topic]; ok {
 		close(ch)
+		delete(m.waitingOn, d.Topic)
 	}
 }
 

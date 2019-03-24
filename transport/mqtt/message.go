@@ -24,6 +24,41 @@ type MessageHandler interface {
 	TopicName(t EventType) string
 }
 
+func (m *mqtt) updateWills(devTopic string, newWillID string) {
+	m.Lock()
+	defer m.Unlock()
+	if m.willMap == nil {
+		m.willMap = map[string][]string{}
+	}
+	found := false
+outer:
+	for k, v := range m.willMap {
+		var mm []string
+		for _, vv := range v {
+			if vv == devTopic {
+				if k == newWillID {
+					found = true
+					continue outer
+				}
+				continue
+			}
+			mm = append(mm, vv)
+		}
+		if k == newWillID {
+			found = true
+			mm = append(mm, devTopic)
+		}
+		if len(mm) == 0 {
+			delete(m.willMap, k)
+		} else if len(mm) != len(v) {
+			m.willMap[k] = mm
+		}
+	}
+	if !found && len(newWillID) > 0 {
+		m.willMap[newWillID] = []string{devTopic}
+	}
+}
+
 func (m *mqtt) OnAnnounce(p *libmqtt.PublishPacket) {
 	m.RLock()
 	if m.deviceState == nil {
@@ -32,21 +67,63 @@ func (m *mqtt) OnAnnounce(p *libmqtt.PublishPacket) {
 	}
 	reachable := m.discoverSent
 	m.RUnlock()
+	devTopic := p.TopicName[len(m.announceTopic)+1:]
+
+	if len(p.Payload) == 0 {
+		m.updateWills(devTopic, "")
+		m.deviceState <- &device.State{
+			Topic:  devTopic,
+			Action: device.DeleteAction,
+		}
+		return
+	}
+
 	dev := &device.Info{}
 	err := json.Unmarshal(p.Payload, dev)
 	if dev.Topic == "" {
-		dev.Topic = p.TopicName[len(m.announceTopic)+1:]
+		dev.Topic = devTopic
 	}
 	dev.Reachable = reachable
 	if err != nil {
 		log.Printf("Error in json: %v (packet: %s)", err, string(p.Payload))
 		return
 	}
-	m.deviceState <- dev
+	m.updateWills(devTopic, dev.LastWillID)
+	m.deviceState <- &device.State{
+		Device: dev,
+		Action: device.UpdateAction,
+		Topic:  devTopic,
+	}
 }
 
 func (m *mqtt) OnLeave(p *libmqtt.PublishPacket) {
+	willID := string(p.Payload)
+	if willID == "" {
+		return
+	}
+	m.RLock()
+	if m.willMap == nil {
+		m.RUnlock()
+		return
+	}
+	var devices []string
+	var ok bool
 
+	if devices, ok = m.willMap[string(p.Payload)]; !ok {
+		m.RUnlock()
+		return
+	}
+	m.RUnlock()
+	m.Lock()
+	delete(m.willMap, willID)
+	m.Unlock()
+
+	for _, d := range devices {
+		m.deviceState <- &device.State{
+			Topic:  d,
+			Action: device.LeaveAction,
+		}
+	}
 }
 
 func (m *mqtt) OnDiscover(p *libmqtt.PublishPacket) {
@@ -89,11 +166,11 @@ func (m *mqtt) TopicName(t EventType) string {
 }
 
 // DeviceState returns a channel which publishes information about new and changed devices
-func (m *mqtt) DeviceState() chan *device.Info {
+func (m *mqtt) DeviceState() chan *device.State {
 	m.Lock()
 	defer m.Unlock()
 	if m.deviceState == nil {
-		m.deviceState = make(chan *device.Info, 10)
+		m.deviceState = make(chan *device.State, 10)
 		m.sendDiscover()
 	}
 	return m.deviceState

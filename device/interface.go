@@ -29,3 +29,17 @@ type Transport interface {
 	PublishMeta(topic string, payload []byte)
 	LastWillID() string
 }
+
+type Action string
+
+const (
+	DeleteAction Action = "delete"
+	UpdateAction Action = "update"
+	LeaveAction  Action = "leave"
+)
+
+type State struct {
+	Device *Info
+	Action Action
+	Topic  string
+}
