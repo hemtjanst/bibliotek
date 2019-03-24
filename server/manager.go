@@ -6,7 +6,6 @@ import (
 	"log"
 	"sync"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/hemtjanst/bibliotek/device"
 )
 
@@ -43,7 +42,6 @@ func (m *Manager) Start(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case d := <-m.transport.DeviceState():
-			log.Printf("Device State: %+v", d)
 			switch d.Action {
 			case device.DeleteAction:
 				m.RemoveDevice(d.Topic)
@@ -75,6 +73,7 @@ func (m *Manager) AddDevice(d *device.Info) {
 		log.Printf("Failed to create device: %v", err)
 		return
 	}
+	log.Printf("Device Created: %+v", d)
 	m.Lock()
 	defer m.Unlock()
 	m.devices[d.Topic] = dev
@@ -91,41 +90,21 @@ func (m *Manager) UpdateDevice(d *device.Info) {
 
 	dev := m.devices[d.Topic]
 
-	if d.Name != dev.Name() {
-		log.Printf("Device has different Name: current %s, new %s", dev.Name(), d.Name)
+	updates, err := dev.update(d)
+	if err != nil {
+		log.Printf("Cannot update device %s: %s", dev.Id(), err)
 		return
 	}
-	if d.Manufacturer != dev.Manufacturer() {
-		log.Printf("Device has different Manufacturer: current %s, new %s", dev.Manufacturer(), d.Manufacturer)
-		return
-	}
-	if d.Model != dev.Model() {
-		log.Printf("Device has different Model: current %s, new %s", dev.Model(), d.Model)
-		return
-	}
-	if d.SerialNumber != dev.SerialNumber() {
-		log.Printf("Device has different SerialNumber: current %s, new %s", dev.SerialNumber(), d.SerialNumber)
-		return
-	}
-	if d.Type != dev.Type() {
-		log.Printf("Device has different Type: current %s, new %s", dev.Type(), d.Type)
-		return
+	for _, upd := range updates {
+		log.Printf("[%s] %s changed \"%s\" -> \"%s\" (%+v)",
+			dev.Id(),
+			upd.Field,
+			upd.Old,
+			upd.New,
+			upd.FeatureInfo,
+		)
 	}
 
-	oldft := []string{}
-	for _, ft := range dev.Features() {
-		oldft = append(oldft, ft.Name())
-	}
-	newft := []string{}
-	for ft := range d.Features {
-		newft = append(newft, ft)
-	}
-	if diff := cmp.Diff(oldft, newft); diff != "" {
-		log.Printf("Device has different features (-current +new):\n%s", diff)
-		return
-	}
-
-	dev.update(d)
 }
 
 // RemoveDevice removes a device based on the topic name

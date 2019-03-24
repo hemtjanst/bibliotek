@@ -25,6 +25,8 @@ type Common interface {
 type Transport interface {
 	Publish(topic string, payload []byte, retain bool)
 	Subscribe(topic string) chan []byte
+	Unsubscribe(topic string) bool
+	Resubscribe(oldTopic, newTopic string) bool
 	Discover() chan struct{}
 	PublishMeta(topic string, payload []byte)
 	LastWillID() string

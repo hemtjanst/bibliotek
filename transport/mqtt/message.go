@@ -195,6 +195,40 @@ func (m *mqtt) Publish(topic string, payload []byte, retain bool) {
 		},
 	)
 }
+
+func (m *mqtt) Unsubscribe(topic string) bool {
+	m.Lock()
+	defer m.Unlock()
+	if v, ok := m.sub[topic]; ok {
+		for _, ch := range v {
+			close(ch)
+		}
+		delete(m.sub, topic)
+		m.client.UnSubscribe(topic)
+		return true
+	}
+	return false
+}
+
+func (m *mqtt) Resubscribe(oldTopic, newTopic string) bool {
+	m.Lock()
+	defer m.Unlock()
+	if v, ok := m.sub[oldTopic]; ok {
+		if _, ok := m.sub[newTopic]; !ok {
+			m.sub[newTopic] = v
+			m.client.Subscribe(
+				&libmqtt.Topic{Name: newTopic},
+			)
+		} else {
+			m.sub[newTopic] = append(m.sub[newTopic], v...)
+		}
+		delete(m.sub, oldTopic)
+		m.client.UnSubscribe(oldTopic)
+		return true
+	}
+	return false
+}
+
 func (m *mqtt) Subscribe(topic string) chan []byte {
 	m.Lock()
 	defer m.Unlock()

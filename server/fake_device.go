@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"github.com/hemtjanst/bibliotek/device"
 	"github.com/hemtjanst/bibliotek/feature"
 )
@@ -40,6 +41,6 @@ func (f *FakeDevice) Features() []Feature {
 func (f *FakeDevice) setReachability(r bool) {
 	return
 }
-func (f *FakeDevice) update(*device.Info) {
-	return
+func (f *FakeDevice) update(*device.Info) ([]*device.InfoUpdate, error) {
+	return nil, errors.New("device doesn't exist")
 }

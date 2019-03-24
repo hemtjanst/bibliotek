@@ -32,3 +32,12 @@ func (f *Fake) OnUpdate() (chan string, error) {
 func (f *Fake) Exists() bool {
 	return false
 }
+func (f *Fake) UpdateInfo(*Info) []*InfoUpdate {
+	return nil
+}
+func (f *Fake) GetTopic() string {
+	return ""
+}
+func (f *Fake) SetTopic() string {
+	return ""
+}
