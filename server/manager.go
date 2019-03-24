@@ -112,8 +112,14 @@ func (m *Manager) UpdateDevice(d *device.Info) {
 		return
 	}
 
-	oldft := dev.Features()
-	newft := upd.Features()
+	oldft := []string{}
+	for _, ft := range dev.Features() {
+		oldft = append(oldft, ft.Name())
+	}
+	newft := []string{}
+	for ft := range d.Features {
+		newft = append(newft, ft)
+	}
 	if diff := cmp.Diff(oldft, newft); diff != "" {
 		log.Printf("Device has different features (-current +new):\n%s", diff)
 	}
