@@ -41,6 +41,9 @@ func (f *FakeDevice) Features() []Feature {
 func (f *FakeDevice) IsReachable() bool {
 	return false
 }
+func (f *FakeDevice) Info() *device.Info {
+	return nil
+}
 func (f *FakeDevice) setReachability(r bool) {
 	return
 }

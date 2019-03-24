@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/hemtjanst/bibliotek/device"
 	"github.com/hemtjanst/bibliotek/feature"
 )
@@ -53,6 +54,28 @@ func NewDevice(info *device.Info, transport device.Transport) (Device, error) {
 		}
 	}()
 	return d, nil
+}
+
+func DeleteDevice(info *device.Info, transport device.Transport) error {
+	if info == nil {
+		return errors.New("device info invalid")
+	}
+	if info.Topic == "" {
+		return errors.New("device has no topic set")
+	}
+	if info != nil && info.Features != nil {
+		for name, ft := range info.Features {
+			var fTopic string
+			if ft.GetTopic == "" {
+				fTopic = info.Topic + "/" + name + "/get"
+			} else {
+				fTopic = ft.GetTopic
+			}
+			transport.Publish(fTopic, []byte{}, true)
+		}
+	}
+	transport.PublishMeta(info.Topic, []byte{})
+	return nil
 }
 
 type clientDev struct {

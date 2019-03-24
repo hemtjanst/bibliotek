@@ -26,6 +26,9 @@ type Device interface {
 	// IsReachable returns true if device is online
 	IsReachable() bool
 
+	// Info returns the original device info
+	Info() *device.Info
+
 	// Changes the reachable attribute of a device
 	setReachability(bool)
 
@@ -68,11 +71,11 @@ func (d *serverDev) Features() (fts []Feature) {
 }
 
 func (d *serverDev) IsReachable() bool {
-	return d.Info.Reachable
+	return d.Device.Info.Reachable
 }
 
 func (d *serverDev) setReachability(r bool) {
-	d.Info.Reachable = r
+	d.Device.Info.Reachable = r
 }
 
 // update updates the device representation
@@ -89,4 +92,8 @@ func (d *serverDev) stop() {
 			d.Transport.Unsubscribe(ft.SetTopic())
 		}
 	}
+}
+
+func (d *serverDev) Info() *device.Info {
+	return d.Device.Info
 }
