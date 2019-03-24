@@ -20,8 +20,10 @@ type Feature interface {
 	Exists() bool
 	Set(string) error
 	OnUpdate() (chan string, error)
+	OnUpdateFunc(func(string)) error
 	Update(string) error
 	OnSet() (chan string, error)
+	OnSetFunc(func(string)) error
 	UpdateInfo(*Info) []*InfoUpdate
 	GetTopic() string
 	SetTopic() string

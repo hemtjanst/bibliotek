@@ -26,8 +26,14 @@ func (f *Fake) Update(string) error {
 func (f *Fake) OnSet() (chan string, error) {
 	return nil, f.Err
 }
+func (f *Fake) OnSetFunc(func(string)) error {
+	return f.Err
+}
 func (f *Fake) OnUpdate() (chan string, error) {
 	return nil, f.Err
+}
+func (f *Fake) OnUpdateFunc(func(string)) error {
+	return f.Err
 }
 func (f *Fake) Exists() bool {
 	return false
