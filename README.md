@@ -1,4 +1,4 @@
-# 🏛️ Bibliotek 📚
+# 🏛️ Bibliotek 📚 [![Build Status](https://travis-ci.org/hemtjanst/bibliotek.svg?branch=master)](https://travis-ci.org/hemtjanst/bibliotek) ![GitHub release](https://img.shields.io/github/release/hemtjanst/bibliotek.svg)
 
 Bibliotek ('library' in Swedish) provides common primitives and utilities for
 integrating with and extending the Hemtjänst platform.
