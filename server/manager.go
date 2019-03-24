@@ -16,9 +16,16 @@ type Transport interface {
 	device.Transport
 }
 
+type Handler interface {
+	AddedDevice(Device)
+	UpdatedDevice(Device, []*device.InfoUpdate)
+	RemovedDevice(Device)
+}
+
 // Manager holds all the devices and deals with updating device
 // state as it receives it from the transport
 type Manager struct {
+	handler   Handler
 	transport Transport
 	devices   map[string]Device
 	waitingOn map[string]chan struct{}
@@ -32,6 +39,12 @@ func New(t Transport) *Manager {
 		devices:   map[string]Device{},
 		waitingOn: map[string]chan struct{}{},
 	}
+}
+
+func (m *Manager) SetHandler(handler Handler) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	m.handler = handler
 }
 
 // Start starts the Manager's main loop, conusming messages and
@@ -73,10 +86,13 @@ func (m *Manager) addDevice(d *device.Info) {
 		log.Printf("Failed to create device: %v", err)
 		return
 	}
-	log.Printf("Device Created: %+v", d)
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.devices[d.Topic] = dev
+	if m.handler != nil {
+		go m.handler.AddedDevice(dev)
+	}
+
 	if ch, ok := m.waitingOn[d.Topic]; ok {
 		close(ch)
 		delete(m.waitingOn, d.Topic)
@@ -95,16 +111,11 @@ func (m *Manager) updateDevice(d *device.Info) {
 		log.Printf("Cannot update device %s: %s", dev.Id(), err)
 		return
 	}
-	for _, upd := range updates {
-		log.Printf("[%s] %s changed \"%s\" -> \"%s\" (%+v)",
-			dev.Id(),
-			upd.Field,
-			upd.Old,
-			upd.New,
-			upd.FeatureInfo,
-		)
+	if len(updates) > 0 {
+		if m.handler != nil {
+			go m.handler.UpdatedDevice(dev, updates)
+		}
 	}
-
 }
 
 // RemoveDevice removes a device based on the topic name
@@ -120,13 +131,25 @@ func (m *Manager) removeDevice(topic string) {
 	if dev != nil {
 		dev.stop()
 	}
+	if m.handler != nil {
+		go m.handler.RemovedDevice(dev)
+	}
 }
 
 // UnreachableDevice marks the device specified by the topic
 // as unreachable. This does not delete the device.
 // Marking a non-existant device as unreachable is a no-op
 func (m *Manager) unreachableDevice(topic string) {
-	m.Device(topic).setReachability(false)
+	dev := m.Device(topic)
+	if dev.Exists() {
+		wasReachable := dev.IsReachable()
+		dev.setReachability(false)
+		if wasReachable && m.handler != nil {
+			go m.handler.UpdatedDevice(dev, []*device.InfoUpdate{
+				{Field: "reachable", Old: "1", New: "0"},
+			})
+		}
+	}
 }
 
 // Device returns a device associated with the topic

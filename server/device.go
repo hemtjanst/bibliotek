@@ -23,6 +23,9 @@ type Device interface {
 	// Features returns a slice of available features
 	Features() []Feature
 
+	// IsReachable returns true if device is online
+	IsReachable() bool
+
 	// Changes the reachable attribute of a device
 	setReachability(bool)
 
@@ -62,6 +65,10 @@ func (d *serverDev) Features() (fts []Feature) {
 		fts = append(fts, ft)
 	}
 	return
+}
+
+func (d *serverDev) IsReachable() bool {
+	return d.Info.Reachable
 }
 
 func (d *serverDev) setReachability(r bool) {

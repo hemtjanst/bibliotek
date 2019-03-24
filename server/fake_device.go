@@ -38,6 +38,9 @@ func (f *FakeDevice) Exists() bool {
 func (f *FakeDevice) Features() []Feature {
 	return []Feature{}
 }
+func (f *FakeDevice) IsReachable() bool {
+	return false
+}
 func (f *FakeDevice) setReachability(r bool) {
 	return
 }

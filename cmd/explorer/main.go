@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/hemtjanst/bibliotek/device"
 	"github.com/hemtjanst/bibliotek/server"
 	"github.com/hemtjanst/bibliotek/transport/mqtt"
 	"log"
@@ -33,9 +34,37 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = server.New(mq).Start(ctx)
+	srv := server.New(mq)
+
+	srv.SetHandler(&handler{})
+
+	err = srv.Start(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+}
+
+type handler struct{}
+
+func (h *handler) AddedDevice(dev server.Device) {
+	log.Printf("Device Created: %+v", dev)
+
+}
+
+func (h *handler) UpdatedDevice(dev server.Device, updates []*device.InfoUpdate) {
+	for _, upd := range updates {
+		log.Printf("[%s] %s changed \"%s\" -> \"%s\" (%+v)",
+			dev.Id(),
+			upd.Field,
+			upd.Old,
+			upd.New,
+			upd.FeatureInfo,
+		)
+	}
+
+}
+
+func (h *handler) RemovedDevice(dev server.Device) {
+	log.Printf("Device Removed: %+v", dev)
 }
