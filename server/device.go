@@ -28,6 +28,9 @@ type Device interface {
 
 	// Updates the device with the new representation
 	update(*device.Info) ([]*device.InfoUpdate, error)
+
+	// Stop device
+	stop()
 }
 
 // NewDevice should normally only be called with data from announcements.
@@ -68,4 +71,15 @@ func (d *serverDev) setReachability(r bool) {
 // update updates the device representation
 func (d *serverDev) update(info *device.Info) ([]*device.InfoUpdate, error) {
 	return d.Device.UpdateInfo(info)
+}
+
+func (d *serverDev) stop() {
+	for _, ft := range d.Device.Features {
+		if ft.GetTopic() != "" {
+			d.Transport.Unsubscribe(ft.GetTopic())
+		}
+		if ft.SetTopic() != "" {
+			d.Transport.Unsubscribe(ft.SetTopic())
+		}
+	}
 }

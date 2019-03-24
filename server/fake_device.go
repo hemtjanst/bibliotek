@@ -44,3 +44,5 @@ func (f *FakeDevice) setReachability(r bool) {
 func (f *FakeDevice) update(*device.Info) ([]*device.InfoUpdate, error) {
 	return nil, errors.New("device doesn't exist")
 }
+
+func (f *FakeDevice) stop() {}

@@ -22,7 +22,7 @@ type Manager struct {
 	transport Transport
 	devices   map[string]Device
 	waitingOn map[string]chan struct{}
-	sync.RWMutex
+	lock      sync.RWMutex
 }
 
 // New creates a new Manager
@@ -44,14 +44,14 @@ func (m *Manager) Start(ctx context.Context) error {
 		case d := <-m.transport.DeviceState():
 			switch d.Action {
 			case device.DeleteAction:
-				m.RemoveDevice(d.Topic)
+				m.removeDevice(d.Topic)
 			case device.LeaveAction:
-				m.UnreachableDevice(d.Topic)
+				m.unreachableDevice(d.Topic)
 			case device.UpdateAction:
 				if !m.HasDevice(d.Topic) {
-					m.AddDevice(d.Device)
+					m.addDevice(d.Device)
 				} else {
-					m.UpdateDevice(d.Device)
+					m.updateDevice(d.Device)
 				}
 			}
 		}
@@ -60,22 +60,22 @@ func (m *Manager) Start(ctx context.Context) error {
 
 // HasDevice checks if a device is registered on the topic
 func (m *Manager) HasDevice(topic string) bool {
-	m.RLock()
-	defer m.RUnlock()
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 	_, ok := m.devices[topic]
 	return ok
 }
 
 // AddDevice adds a new device to the manager's devices
-func (m *Manager) AddDevice(d *device.Info) {
+func (m *Manager) addDevice(d *device.Info) {
 	dev, err := NewDevice(d, m.transport)
 	if err != nil {
 		log.Printf("Failed to create device: %v", err)
 		return
 	}
 	log.Printf("Device Created: %+v", d)
-	m.Lock()
-	defer m.Unlock()
+	m.lock.Lock()
+	defer m.lock.Unlock()
 	m.devices[d.Topic] = dev
 	if ch, ok := m.waitingOn[d.Topic]; ok {
 		close(ch)
@@ -84,9 +84,9 @@ func (m *Manager) AddDevice(d *device.Info) {
 }
 
 // UpdateDevice updates an existing device with the new info
-func (m *Manager) UpdateDevice(d *device.Info) {
-	m.Lock()
-	defer m.Unlock()
+func (m *Manager) updateDevice(d *device.Info) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
 
 	dev := m.devices[d.Topic]
 
@@ -109,24 +109,31 @@ func (m *Manager) UpdateDevice(d *device.Info) {
 
 // RemoveDevice removes a device based on the topic name
 // Removing a device that does not exist is a no-op
-func (m *Manager) RemoveDevice(topic string) {
-	m.Lock()
-	defer m.Unlock()
+func (m *Manager) removeDevice(topic string) {
+	if !m.HasDevice(topic) {
+		return
+	}
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	dev := m.devices[topic]
 	delete(m.devices, topic)
+	if dev != nil {
+		dev.stop()
+	}
 }
 
 // UnreachableDevice marks the device specified by the topic
 // as unreachable. This does not delete the device.
 // Marking a non-existant device as unreachable is a no-op
-func (m *Manager) UnreachableDevice(topic string) {
+func (m *Manager) unreachableDevice(topic string) {
 	m.Device(topic).setReachability(false)
 }
 
 // Device returns a device associated with the topic
 func (m *Manager) Device(topic string) Device {
 	if m.HasDevice(topic) {
-		m.RLock()
-		defer m.RUnlock()
+		m.lock.RLock()
+		defer m.lock.RUnlock()
 		return m.devices[topic]
 	}
 	err := errors.New("device not found")
@@ -135,8 +142,8 @@ func (m *Manager) Device(topic string) Device {
 
 // Devices returns all devices known to the manager
 func (m *Manager) Devices() []Device {
-	m.RLock()
-	defer m.RUnlock()
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 	var devs []Device
 	for _, dev := range m.devices {
 		devs = append(devs, dev)
@@ -148,11 +155,11 @@ func (m *Manager) Devices() []Device {
 // This blocks until either the device shows up, or the context is cancelled
 func (m *Manager) WaitForDevice(ctx context.Context, topic string) Device {
 	if m.HasDevice(topic) {
-		m.RLock()
-		defer m.RUnlock()
+		m.lock.RLock()
+		defer m.lock.RUnlock()
 		return m.devices[topic]
 	}
-	m.Lock()
+	m.lock.Lock()
 
 	ch, ok := m.waitingOn[topic]
 	if !ok {
@@ -160,7 +167,7 @@ func (m *Manager) WaitForDevice(ctx context.Context, topic string) Device {
 		m.waitingOn[topic] = ch
 	}
 
-	m.Unlock()
+	m.lock.Unlock()
 
 	select {
 	case <-ch:
