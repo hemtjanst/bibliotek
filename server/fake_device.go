@@ -1,6 +1,9 @@
 package server
 
-import "github.com/hemtjanst/bibliotek/feature"
+import (
+	"github.com/hemtjanst/bibliotek/device"
+	"github.com/hemtjanst/bibliotek/feature"
+)
 
 type FakeDevice struct {
 	Err   error
@@ -33,4 +36,10 @@ func (f *FakeDevice) Exists() bool {
 }
 func (f *FakeDevice) Features() []Feature {
 	return []Feature{}
+}
+func (f *FakeDevice) setReachability(r bool) {
+	return
+}
+func (f *FakeDevice) update(*device.Info) {
+	return
 }

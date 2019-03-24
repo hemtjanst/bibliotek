@@ -22,6 +22,12 @@ type Device interface {
 
 	// Features returns a slice of available features
 	Features() []Feature
+
+	// Changes the reachable attribute of a device
+	setReachability(bool)
+
+	// Updates the device with the new representation
+	update(*device.Info)
 }
 
 // NewDevice should normally only be called with data from announcements.
@@ -52,5 +58,14 @@ func (d *serverDev) Features() (fts []Feature) {
 	for _, ft := range d.Device.Features {
 		fts = append(fts, ft)
 	}
+	return
+}
+
+func (d *serverDev) setReachability(r bool) {
+	d.Info.Reachable = r
+}
+
+// update updates the device representation
+func (d *serverDev) update(info *device.Info) {
 	return
 }

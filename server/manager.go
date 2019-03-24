@@ -6,6 +6,7 @@ import (
 	"log"
 	"sync"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/hemtjanst/bibliotek/device"
 )
 
@@ -42,11 +43,17 @@ func (m *Manager) Start(ctx context.Context) error {
 			return nil
 		case d := <-m.transport.DeviceState():
 			log.Printf("Device State: %+v", d)
-			if d.Device == nil {
-				continue
-			}
-			if !m.HasDevice(d.Topic) {
-				m.AddDevice(d.Device)
+			switch d.Action {
+			case device.DeleteAction:
+				m.RemoveDevice(d.Topic)
+			case device.LeaveAction:
+				m.UnreachableDevice(d.Topic)
+			case device.UpdateAction:
+				if !m.HasDevice(d.Topic) {
+					m.AddDevice(d.Device)
+				} else {
+					m.UpdateDevice(d.Device)
+				}
 			}
 		}
 	}
@@ -72,6 +79,63 @@ func (m *Manager) AddDevice(d *device.Info) {
 		close(ch)
 		delete(m.waitingOn, d.Topic)
 	}
+}
+
+// UpdateDevice updates an existing device with the new info
+func (m *Manager) UpdateDevice(d *device.Info) {
+	upd, err := NewDevice(d, m.transport)
+	if err != nil {
+		log.Printf("Failed to create device: %v", err)
+		return
+	}
+	m.Lock()
+	defer m.Unlock()
+
+	dev := m.devices[d.Topic]
+
+	if upd.Name() != dev.Name() {
+		log.Printf("Device has different Name: current %s, new %s", dev.Name(), upd.Name())
+		return
+	}
+	if upd.Manufacturer() != dev.Manufacturer() {
+		log.Printf("Device has different Manufacturer: current %s, new %s", dev.Manufacturer(), upd.Manufacturer())
+		return
+	}
+	if upd.Model() != dev.Model() {
+		log.Printf("Device has different Model: current %s, new %s", dev.Model(), upd.Model())
+		return
+	}
+	if upd.SerialNumber() != dev.SerialNumber() {
+		log.Printf("Device has different SerialNumber: current %s, new %s", dev.SerialNumber(), upd.SerialNumber())
+		return
+	}
+	if upd.Type() != dev.Type() {
+		log.Printf("Device has different Type: current %s, new %s", dev.Type(), upd.Type())
+		return
+	}
+
+	oldft := dev.Features()
+	newft := upd.Features()
+	if diff := cmp.Diff(oldft, newft); diff != "" {
+		log.Printf("Device has different features (-current +new):\n%s", diff)
+	}
+
+	dev.update(d)
+}
+
+// RemoveDevice removes a device based on the topic name
+// Removing a device that does not exist is a no-op
+func (m *Manager) RemoveDevice(topic string) {
+	m.Lock()
+	defer m.Unlock()
+	delete(m.devices, topic)
+}
+
+// UnreachableDevice marks the device specified by the topic
+// as unreachable. This does not delete the device.
+// Marking a non-existant device as unreachable is a no-op
+func (m *Manager) UnreachableDevice(topic string) {
+	m.Device(topic).setReachability(false)
 }
 
 func (m *Manager) Device(topic string) Device {
