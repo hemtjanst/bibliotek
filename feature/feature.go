@@ -2,6 +2,7 @@ package feature
 
 import "strconv"
 
+// Info holds information about a feature
 type Info struct {
 	Min      int    `json:"min,omitempty"`
 	Max      int    `json:"max,omitempty"`
@@ -10,6 +11,7 @@ type Info struct {
 	SetTopic string `json:"setTopic,omitempty"`
 }
 
+// Feature represents a feature of a device
 type Feature interface {
 	Name() string
 	Min() int
@@ -25,6 +27,7 @@ type Feature interface {
 	SetTopic() string
 }
 
+// Transport is the feature's transport
 type Transport interface {
 	SubscribeFeature(string) chan []byte
 	UpdateFeature(*Info, []byte)
@@ -35,14 +38,19 @@ type feature struct {
 	info      *Info
 	name      string
 	transport Transport
+	value     string
 }
 
+// InfoUpdate represents an update to the feature's current
+// info
 type InfoUpdate struct {
 	Name string
 	Old  string
 	New  string
 }
 
+// New creates a new feature with the specified name and info
+// and embeds the transport over which it can be interacted with
 func New(name string, info *Info, transport Transport) Feature {
 	return &feature{
 		name:      name,
@@ -59,6 +67,7 @@ func (f *feature) Exists() bool     { return true }
 func (f *feature) GetTopic() string { return f.info.GetTopic }
 func (f *feature) SetTopic() string { return f.info.SetTopic }
 
+// UpdateInfo updates the Info of the feature
 func (f *feature) UpdateInfo(i *Info) (u []*InfoUpdate) {
 	if i.GetTopic != "" && i.GetTopic != f.info.GetTopic {
 		u = append(u, &InfoUpdate{"getTopic", f.info.GetTopic, i.GetTopic})
@@ -83,16 +92,25 @@ func (f *feature) UpdateInfo(i *Info) (u []*InfoUpdate) {
 	return
 }
 
+// Update publishes the new value of the feature
+// This is a no-op if the new and current value are the same
 func (f *feature) Update(s string) error {
+	if f.value == s {
+		return nil
+	}
 	f.transport.UpdateFeature(f.info, []byte(s))
+	f.value = s
 	return nil
 }
 
+// Set updates the value of the feature
 func (f *feature) Set(s string) error {
 	f.transport.SetFeature(f.info, []byte(s))
 	return nil
 }
 
+// OnUpdate returns a channel on which updates
+// of the feature's value are published
 func (f *feature) OnUpdate() (chan string, error) {
 	res := f.transport.SubscribeFeature(f.info.GetTopic)
 	ch := make(chan string, 5)
@@ -109,6 +127,8 @@ func (f *feature) OnUpdate() (chan string, error) {
 	return ch, nil
 }
 
+// OnSet returns a channel on which notifications of a
+// feature's intended new value are published
 func (f *feature) OnSet() (chan string, error) {
 	res := f.transport.SubscribeFeature(f.info.SetTopic)
 	ch := make(chan string, 5)
