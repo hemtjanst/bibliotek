@@ -10,6 +10,7 @@ import (
 	"github.com/hemtjanst/bibliotek/device"
 )
 
+// Transport is the server's transport
 type Transport interface {
 	// DeviceState receives a device.Info on announce, leave or update
 	DeviceState() chan *device.State
@@ -59,6 +60,7 @@ func (m *Manager) Start(ctx context.Context) error {
 	}
 }
 
+// HasDevice checks if a device is registered on the topic
 func (m *Manager) HasDevice(topic string) bool {
 	m.RLock()
 	defer m.RUnlock()
@@ -66,6 +68,7 @@ func (m *Manager) HasDevice(topic string) bool {
 	return ok
 }
 
+// AddDevice adds a new device to the manager's devices
 func (m *Manager) AddDevice(d *device.Info) {
 	dev, err := NewDevice(d, m.transport)
 	if err != nil {
@@ -138,6 +141,7 @@ func (m *Manager) UnreachableDevice(topic string) {
 	m.Device(topic).setReachability(false)
 }
 
+// Device returns a device associated with the topic
 func (m *Manager) Device(topic string) Device {
 	if m.HasDevice(topic) {
 		m.RLock()
@@ -148,6 +152,7 @@ func (m *Manager) Device(topic string) Device {
 	return &FakeDevice{Topic: topic, Err: err}
 }
 
+// Devices returns all devices known to the manager
 func (m *Manager) Devices() []Device {
 	m.RLock()
 	defer m.RUnlock()
