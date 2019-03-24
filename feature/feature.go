@@ -133,6 +133,25 @@ func (f *feature) OnUpdate() (chan string, error) {
 	return ch, nil
 }
 
+// OnUpdateFunc calls the provided callback when updates
+// of the feature's value are published
+func (f *feature) OnUpdateFunc(fn func(val string)) error {
+	ch, err := f.OnUpdate()
+	if err != nil {
+		return err
+	}
+	go func() {
+		for {
+			val, open := <-ch
+			if !open {
+				return
+			}
+			fn(val)
+		}
+	}()
+	return nil
+}
+
 // OnSet returns a channel on which notifications of a
 // feature's intended new value are published
 func (f *feature) OnSet() (chan string, error) {
@@ -149,4 +168,23 @@ func (f *feature) OnSet() (chan string, error) {
 		}
 	}()
 	return ch, nil
+}
+
+// OnSetFunc calls the provided callback when a
+// feature's intended new value is published
+func (f *feature) OnSetFunc(fn func(val string)) error {
+	ch, err := f.OnSet()
+	if err != nil {
+		return err
+	}
+	go func() {
+		for {
+			val, open := <-ch
+			if !open {
+				return
+			}
+			fn(val)
+		}
+	}()
+	return nil
 }

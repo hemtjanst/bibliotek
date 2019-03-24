@@ -8,4 +8,5 @@ type Feature interface {
 	Exists() bool
 	Update(string) error
 	OnSet() (chan string, error)
+	OnSetFunc(func(string)) error
 }
