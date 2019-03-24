@@ -12,8 +12,9 @@ matrix:
   allow_failures:
     - go: master
 env:
-  - GO111MODULE=on
-  - BIBLIOTEK_TEST_INTEGRATION=1
+  global:
+    - GO111MODULE=on
+    - BIBLIOTEK_TEST_INTEGRATION=1
 cache:
   directories:
     - $HOME/.cache/go-build
