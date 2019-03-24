@@ -3,8 +3,10 @@ package mqtt
 import (
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"github.com/goiiot/libmqtt"
 	"github.com/google/uuid"
+	"net"
 	"os"
 	"path"
 	"strings"
@@ -54,8 +56,24 @@ func (c *Config) check() error {
 		id = id + "-" + uuid.New().String()
 		c.ClientID = id
 	}
+	if c.AnnounceTopic == "" {
+		c.AnnounceTopic = "announce"
+	}
+	if c.DiscoverTopic == "" {
+		c.DiscoverTopic = "discover"
+	}
+	if c.LeaveTopic == "" {
+		c.LeaveTopic = "leave"
+	}
+
 	if len(c.Address) == 0 {
 		return ErrNoAddress
+	}
+	for _, addr := range c.Address {
+		_, err := net.ResolveTCPAddr("tcp", addr)
+		if err != nil {
+			return fmt.Errorf("invalid address %s: %s", addr, err)
+		}
 	}
 	for _, v := range []string{c.AnnounceTopic, c.DiscoverTopic, c.LeaveTopic} {
 		if strings.ContainsAny(v, "#+") {
@@ -67,6 +85,7 @@ func (c *Config) check() error {
 }
 
 func (c *Config) opts() (o []libmqtt.Option) {
+	_ = c.check()
 	o = []libmqtt.Option{
 		libmqtt.WithServer(c.Address...),
 		libmqtt.WithKeepalive(10, 1.2),
