@@ -158,7 +158,9 @@ func (m *Manager) Devices() []Device {
 	return devs
 }
 
-func (m *Manager) WaitForDevice(topic string, ctx context.Context) Device {
+// WaitForDevice waits for a device on the specified topic to appear
+// This blocks until either the device shows up, or the context is cancelled
+func (m *Manager) WaitForDevice(ctx context.Context, topic string) Device {
 	if m.HasDevice(topic) {
 		m.RLock()
 		defer m.RUnlock()
