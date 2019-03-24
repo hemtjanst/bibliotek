@@ -33,14 +33,14 @@ type mqtt struct {
 	sync.RWMutex
 }
 
-func New(ctx context.Context, c *Config) (m *mqtt, err error) {
+func New(ctx context.Context, c *Config) (m MQTT, err error) {
 	if c == nil {
 		return nil, ErrNoConfig
 	}
 	if err = c.check(); err != nil {
 		return
 	}
-	m = &mqtt{
+	mq := &mqtt{
 		discoverDelay: c.DiscoverDelay,
 		willID:        c.ClientID,
 		announceTopic: c.AnnounceTopic,
@@ -49,7 +49,7 @@ func New(ctx context.Context, c *Config) (m *mqtt, err error) {
 		willMap:       map[string][]string{},
 	}
 	opts := []libmqtt.Option{
-		libmqtt.WithRouter(newRouter(m)),
+		libmqtt.WithRouter(newRouter(mq)),
 	}
 	opts = append(opts, c.opts()...)
 
@@ -59,10 +59,10 @@ func New(ctx context.Context, c *Config) (m *mqtt, err error) {
 		return
 	}
 
-	if err = m.init(ctx, client); err != nil {
+	if err = mq.init(ctx, client); err != nil {
 		m = nil
 	}
-
+	m = mq
 	return
 }
 
