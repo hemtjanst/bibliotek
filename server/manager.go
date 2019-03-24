@@ -22,14 +22,28 @@ type Handler interface {
 	RemovedDevice(Device)
 }
 
+type UpdateType string
+
+const (
+	AddedDevice   = "added"
+	UpdatedDevice = "updated"
+	RemovedDevice = "removed"
+)
+
+type Update struct {
+	Type    UpdateType
+	Device  Device
+	Changes []*device.InfoUpdate
+}
+
 // Manager holds all the devices and deals with updating device
 // state as it receives it from the transport
 type Manager struct {
-	handler   Handler
-	transport Transport
-	devices   map[string]Device
-	waitingOn map[string]chan struct{}
-	lock      sync.RWMutex
+	updateChan chan<- Update
+	transport  Transport
+	devices    map[string]Device
+	waitingOn  map[string]chan struct{}
+	lock       sync.RWMutex
 }
 
 // New creates a new Manager
@@ -41,15 +55,51 @@ func New(t Transport) *Manager {
 	}
 }
 
-func (m *Manager) SetHandler(handler Handler) {
+// SetUpdateChannel registers a channel that will receive Update when a device
+// is added, removed or changed.
+func (m *Manager) SetUpdateChannel(ch chan<- Update) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	m.handler = handler
+	if m.updateChan != nil {
+		close(m.updateChan)
+	}
+	m.updateChan = ch
+}
+
+// SetHandler is a wrapper around SetUpdateChannel for use with callbacks instead of channels,
+// the handler is called synchronously
+func (m *Manager) SetHandler(handler Handler) {
+	ch := make(chan Update, 32)
+	go func() {
+		for {
+			u, open := <-ch
+			if !open {
+				return
+			}
+			switch u.Type {
+			case AddedDevice:
+				handler.AddedDevice(u.Device)
+			case UpdatedDevice:
+				handler.UpdatedDevice(u.Device, u.Changes)
+			case RemovedDevice:
+				handler.RemovedDevice(u.Device)
+			}
+		}
+	}()
+	m.SetUpdateChannel(ch)
 }
 
 // Start starts the Manager's main loop, conusming messages and
 // reacting to changes in the system.Start
 func (m *Manager) Start(ctx context.Context) error {
+	defer func() {
+		m.lock.Lock()
+		defer m.lock.Unlock()
+		if m.updateChan != nil {
+			close(m.updateChan)
+			m.updateChan = nil
+		}
+	}()
 	for {
 		select {
 		case <-ctx.Done():
@@ -90,34 +140,38 @@ func (m *Manager) addDevice(d *device.Info) {
 		return
 	}
 	m.lock.Lock()
-	defer m.lock.Unlock()
 	m.devices[d.Topic] = dev
-	if m.handler != nil {
-		go m.handler.AddedDevice(dev)
+
+	var waitCh chan struct{}
+	var ok bool
+
+	if waitCh, ok = m.waitingOn[d.Topic]; ok {
+		delete(m.waitingOn, d.Topic)
 	}
 
-	if ch, ok := m.waitingOn[d.Topic]; ok {
-		close(ch)
-		delete(m.waitingOn, d.Topic)
+	m.lock.Unlock()
+
+	if waitCh != nil {
+		close(waitCh)
+	}
+
+	if m.updateChan != nil {
+		m.updateChan <- Update{Type: AddedDevice, Device: dev}
 	}
 }
 
 // UpdateDevice updates an existing device with the new info
 func (m *Manager) updateDevice(d *device.Info) {
 	m.lock.Lock()
-	defer m.lock.Unlock()
-
 	dev := m.devices[d.Topic]
-
-	updates, err := dev.update(d)
+	changes, err := dev.update(d)
+	m.lock.Unlock()
 	if err != nil {
 		log.Printf("Cannot update device %s: %s", dev.Id(), err)
 		return
 	}
-	if len(updates) > 0 {
-		if m.handler != nil {
-			go m.handler.UpdatedDevice(dev, updates)
-		}
+	if len(changes) > 0 && m.updateChan != nil {
+		m.updateChan <- Update{Type: UpdatedDevice, Device: dev, Changes: changes}
 	}
 }
 
@@ -128,14 +182,14 @@ func (m *Manager) removeDevice(topic string) {
 		return
 	}
 	m.lock.Lock()
-	defer m.lock.Unlock()
 	dev := m.devices[topic]
 	delete(m.devices, topic)
 	if dev != nil {
 		dev.stop()
 	}
-	if m.handler != nil {
-		go m.handler.RemovedDevice(dev)
+	m.lock.Unlock()
+	if m.updateChan != nil {
+		m.updateChan <- Update{Type: RemovedDevice, Device: dev}
 	}
 }
 
@@ -147,10 +201,14 @@ func (m *Manager) unreachableDevice(topic string) {
 	if dev.Exists() {
 		wasReachable := dev.IsReachable()
 		dev.setReachability(false)
-		if wasReachable && m.handler != nil {
-			go m.handler.UpdatedDevice(dev, []*device.InfoUpdate{
-				{Field: "reachable", Old: "1", New: "0"},
-			})
+		if wasReachable && m.updateChan != nil {
+			m.updateChan <- Update{
+				Type:   UpdatedDevice,
+				Device: dev,
+				Changes: []*device.InfoUpdate{
+					{Field: "reachable", Old: "1", New: "0"},
+				},
+			}
 		}
 	}
 }
@@ -180,10 +238,9 @@ func (m *Manager) Devices() []Device {
 // WaitForDevice waits for a device on the specified topic to appear
 // This blocks until either the device shows up, or the context is cancelled
 func (m *Manager) WaitForDevice(ctx context.Context, topic string) Device {
-	if m.HasDevice(topic) {
-		m.lock.RLock()
-		defer m.lock.RUnlock()
-		return m.devices[topic]
+	dev := m.Device(topic)
+	if dev.Exists() {
+		return dev
 	}
 	m.lock.Lock()
 
