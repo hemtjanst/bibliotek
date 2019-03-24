@@ -122,6 +122,7 @@ func (m *Manager) UpdateDevice(d *device.Info) {
 	}
 	if diff := cmp.Diff(oldft, newft); diff != "" {
 		log.Printf("Device has different features (-current +new):\n%s", diff)
+		return
 	}
 
 	dev.update(d)
