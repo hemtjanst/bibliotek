@@ -12,12 +12,15 @@ import (
 	"github.com/hemtjanst/bibliotek/device"
 )
 
+type Packet libmqtt.PublishPacket
+
 type mqtt struct {
 	deviceState   chan *device.State
 	client        mqttClient
 	addr          string
 	initCh        chan error
 	sub           map[string][]chan []byte
+	subRaw        map[string][]chan *Packet
 	willMap       map[string][]string
 	willID        string
 	discoverSub   []chan struct{}
@@ -84,6 +87,7 @@ func (m *mqtt) init(ctx context.Context, client mqttClient) (err error) {
 
 	m.initCh = make(chan error)
 	m.sub = map[string][]chan []byte{}
+	m.subRaw = map[string][]chan *Packet{}
 	m.client = client
 	m.Unlock()
 	m.client.Connect(m.onConnect)
@@ -178,4 +182,39 @@ func (m *mqtt) sendDiscover() {
 
 func (m *mqtt) LastWillID() string {
 	return m.willID
+}
+
+func (m *mqtt) updateWills(devTopic string, newWillID string) {
+	m.Lock()
+	defer m.Unlock()
+	if m.willMap == nil {
+		m.willMap = map[string][]string{}
+	}
+	found := false
+outer:
+	for k, v := range m.willMap {
+		var mm []string
+		for _, vv := range v {
+			if vv == devTopic {
+				if k == newWillID {
+					found = true
+					continue outer
+				}
+				continue
+			}
+			mm = append(mm, vv)
+		}
+		if k == newWillID {
+			found = true
+			mm = append(mm, devTopic)
+		}
+		if len(mm) == 0 {
+			delete(m.willMap, k)
+		} else if len(mm) != len(v) {
+			m.willMap[k] = mm
+		}
+	}
+	if !found && len(newWillID) > 0 {
+		m.willMap[newWillID] = []string{devTopic}
+	}
 }

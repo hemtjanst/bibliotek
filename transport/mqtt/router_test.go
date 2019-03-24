@@ -8,6 +8,7 @@ import (
 
 type MockMessageHandler struct{ mock.Mock }
 
+func (h *MockMessageHandler) OnRaw(p *libmqtt.PublishPacket)      {}
 func (h *MockMessageHandler) OnDiscover(p *libmqtt.PublishPacket) { h.Called(p.TopicName) }
 func (h *MockMessageHandler) OnAnnounce(p *libmqtt.PublishPacket) { h.Called(p.TopicName) }
 func (h *MockMessageHandler) OnLeave(p *libmqtt.PublishPacket)    { h.Called(p.TopicName) }

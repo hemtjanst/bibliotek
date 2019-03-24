@@ -27,6 +27,8 @@ func (r *mqttRouter) Handle(topic string, h libmqtt.TopicHandler) {
 
 // Dispatch defines the action to dispatch published packet
 func (r *mqttRouter) Dispatch(p *libmqtt.PublishPacket) {
+	r.handler.OnRaw(p)
+
 	if p.TopicName == r.handler.TopicName(TypeLeave) {
 		r.handler.OnLeave(p)
 		return

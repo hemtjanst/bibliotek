@@ -17,46 +17,12 @@ const (
 )
 
 type MessageHandler interface {
+	OnRaw(p *libmqtt.PublishPacket)
 	OnAnnounce(p *libmqtt.PublishPacket)
 	OnLeave(p *libmqtt.PublishPacket)
 	OnDiscover(p *libmqtt.PublishPacket)
 	OnFeature(p *libmqtt.PublishPacket)
 	TopicName(t EventType) string
-}
-
-func (m *mqtt) updateWills(devTopic string, newWillID string) {
-	m.Lock()
-	defer m.Unlock()
-	if m.willMap == nil {
-		m.willMap = map[string][]string{}
-	}
-	found := false
-outer:
-	for k, v := range m.willMap {
-		var mm []string
-		for _, vv := range v {
-			if vv == devTopic {
-				if k == newWillID {
-					found = true
-					continue outer
-				}
-				continue
-			}
-			mm = append(mm, vv)
-		}
-		if k == newWillID {
-			found = true
-			mm = append(mm, devTopic)
-		}
-		if len(mm) == 0 {
-			delete(m.willMap, k)
-		} else if len(mm) != len(v) {
-			m.willMap[k] = mm
-		}
-	}
-	if !found && len(newWillID) > 0 {
-		m.willMap[newWillID] = []string{devTopic}
-	}
 }
 
 func (m *mqtt) OnAnnounce(p *libmqtt.PublishPacket) {
