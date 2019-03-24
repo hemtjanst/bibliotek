@@ -3,11 +3,11 @@ package mqtt
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"sync"
 	"time"
 
-	"fmt"
 	"github.com/goiiot/libmqtt"
 	"github.com/hemtjanst/bibliotek/device"
 )

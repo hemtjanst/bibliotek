@@ -1,5 +1,6 @@
 language: go
-sudo: false
+services:
+  - docker
 notifications:
   email: false
 go:
@@ -12,10 +13,16 @@ matrix:
     - go: master
 env:
   - GO111MODULE=on
+  - BIBLIOTEK_TEST_INTEGRATION=1
 cache:
   directories:
     - $HOME/.cache/go-build
     - $GOPATH/pkg/mod
-before_install: go mod download
+before_install:
+  - go mod download
 install: go build ./...
-script: go test -race -v $(go list ./...)
+script: go test -race -v -coverprofile=profile.cov $(go list ./...)
+after_script:
+  - go get github.com/mattn/goveralls
+  - $GOPATH/bin/goveralls -coverprofile=profile.cov -service=travis-ci
+
