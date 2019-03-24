@@ -158,7 +158,17 @@ func (m *mqtt) onConnect(server string, code byte, err error) {
 		m.sendDiscover()
 	}
 
+	seen := map[string]bool{}
 	for topic := range m.sub {
+		seen[topic] = true
+		m.client.Subscribe(
+			&libmqtt.Topic{Name: topic},
+		)
+	}
+	for topic := range m.subRaw {
+		if _, ok := seen[topic]; ok {
+			continue
+		}
 		m.client.Subscribe(
 			&libmqtt.Topic{Name: topic},
 		)
