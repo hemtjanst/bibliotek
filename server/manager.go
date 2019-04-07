@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"strings"
 	"sync"
 
 	"github.com/hemtjanst/bibliotek/device"
@@ -258,4 +259,16 @@ func (m *Manager) WaitForDevice(ctx context.Context, topic string) Device {
 	case <-ctx.Done():
 		return &FakeDevice{Err: errors.New("context cancelled"), Topic: topic}
 	}
+}
+
+// DeviceByType returns all devices known to the manager
+// of type t.
+func (m *Manager) DeviceByType(t string) []Device {
+	devs := []Device{}
+	for _, dev := range m.Devices() {
+		if strings.ToLower(dev.Type()) == strings.ToLower(t) {
+			devs = append(devs, dev)
+		}
+	}
+	return devs
 }
