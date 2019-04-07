@@ -47,3 +47,6 @@ func (f *Fake) GetTopic() string {
 func (f *Fake) SetTopic() string {
 	return ""
 }
+func (f *Fake) Value() string {
+	return ""
+}
