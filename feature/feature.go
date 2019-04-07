@@ -1,6 +1,9 @@
 package feature
 
-import "strconv"
+import (
+	"strconv"
+	"time"
+)
 
 // Info holds information about a feature
 type Info struct {
@@ -24,6 +27,7 @@ type Feature interface {
 	Update(string) error
 	OnSet() (chan string, error)
 	OnSetFunc(func(string)) error
+	Value() string
 	UpdateInfo(*Info) []*InfoUpdate
 	GetTopic() string
 	SetTopic() string
@@ -41,6 +45,7 @@ type feature struct {
 	name      string
 	transport Transport
 	value     string
+	updateSub bool
 }
 
 // InfoUpdate represents an update to the feature's current
@@ -152,6 +157,41 @@ func (f *feature) OnUpdateFunc(fn func(val string)) error {
 		}
 	}()
 	return nil
+}
+
+func (f *feature) Value() string {
+	if !f.updateSub {
+		f.updateSub = true
+		ch := make(chan struct{})
+		go func(ch chan struct{}) {
+			defer func() {
+				if ch != nil {
+					close(ch)
+				}
+			}()
+			up, err := f.OnUpdate()
+			if err != nil {
+				return
+			}
+			for {
+				val, open := <-up
+				if !open {
+					f.updateSub = false
+					return
+				}
+				f.value = string(val)
+				if ch != nil {
+					close(ch)
+					ch = nil
+				}
+			}
+		}(ch)
+		select {
+		case <-ch:
+		case <-time.After(1 * time.Second):
+		}
+	}
+	return f.value
 }
 
 // OnSet returns a channel on which notifications of a

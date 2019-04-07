@@ -9,4 +9,5 @@ type Feature interface {
 	Set(string) error
 	OnUpdate() (chan string, error)
 	OnUpdateFunc(func(string)) error
+	Value() string
 }
