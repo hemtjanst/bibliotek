@@ -80,6 +80,8 @@ func Flags(str FlagStrFunc, b FlagBoolFunc) func() (*Config, error) {
 			keyFile := ""
 			caFile := ""
 			cnName := ""
+			var cp *x509.CertPool
+			var cert tls.Certificate
 
 			if flagTLSInsecure != nil {
 				skipVerify = *flagTLSInsecure
@@ -97,33 +99,46 @@ func Flags(str FlagStrFunc, b FlagBoolFunc) func() (*Config, error) {
 				cnName = *flagTLSHostname
 			}
 
-			b, err := ioutil.ReadFile(caFile)
-			if err != nil {
-				return nil, err
+			if caFile != "" {
+				b, err := ioutil.ReadFile(caFile)
+				if err != nil {
+					return nil, err
+				}
+				cp = x509.NewCertPool()
+				if !cp.AppendCertsFromPEM(b) {
+					return nil, err
+				}
+			} else {
+				cp, err = x509.SystemCertPool()
+				if err != nil {
+					return nil, err
+				}
 			}
-			cp := x509.NewCertPool()
-			if !cp.AppendCertsFromPEM(b) {
-				return nil, err
-			}
-			cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-			if err != nil {
-				return nil, err
+
+			if certFile != "" && keyFile != "" {
+				cert, err = tls.LoadX509KeyPair(certFile, keyFile)
+				if err != nil {
+					return nil, err
+				}
 			}
 
 			c.TLS = &tls.Config{
-				Certificates:       []tls.Certificate{cert},
-				InsecureSkipVerify: skipVerify,
-				ClientCAs:          cp,
-				ServerName:         cnName,
+				ClientCAs:                cp,
+				Certificates:             []tls.Certificate{cert},
+				InsecureSkipVerify:       skipVerify,
+				MinVersion:               tls.VersionTLS12,
+				PreferServerCipherSuites: true,
+				ServerName:               cnName,
 			}
 		}
-		if flagAnnounceTopic != nil && *flagAnnounceTopic != "" {
+
+		if flagAnnounceTopic != nil {
 			c.AnnounceTopic = *flagAnnounceTopic
 		}
-		if flagDiscoverTopic != nil && *flagDiscoverTopic != "" {
+		if flagDiscoverTopic != nil {
 			c.DiscoverTopic = *flagDiscoverTopic
 		}
-		if flagLeaveTopic != nil && *flagLeaveTopic != "" {
+		if flagLeaveTopic != nil {
 			c.LeaveTopic = *flagLeaveTopic
 		}
 		return
