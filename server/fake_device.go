@@ -2,8 +2,8 @@ package server
 
 import (
 	"errors"
-	"github.com/hemtjanst/bibliotek/device"
-	"github.com/hemtjanst/bibliotek/feature"
+	"lib.hemtjan.st/device"
+	"lib.hemtjan.st/feature"
 )
 
 type FakeDevice struct {

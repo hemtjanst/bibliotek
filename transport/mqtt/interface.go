@@ -1,6 +1,6 @@
 package mqtt
 
-import "github.com/hemtjanst/bibliotek/device"
+import "lib.hemtjan.st/device"
 
 type MQTT interface {
 	TopicName(t EventType) string

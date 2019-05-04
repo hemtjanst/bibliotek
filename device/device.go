@@ -1,11 +1,11 @@
-package device
+package device // import "lib.hemtjan.st/device"
 
 import (
 	"errors"
 	"fmt"
 	"strconv"
 
-	"github.com/hemtjanst/bibliotek/feature"
+	"lib.hemtjan.st/feature"
 )
 
 type Info struct {

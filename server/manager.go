@@ -1,4 +1,4 @@
-package server
+package server // import "lib.hemtjan.st/server"
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hemtjanst/bibliotek/device"
+	"lib.hemtjan.st/device"
 )
 
 // Transport is the server's transport

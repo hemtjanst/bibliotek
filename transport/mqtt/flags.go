@@ -42,7 +42,7 @@ type FlagBoolFunc func(name string, def bool, usage string) *bool
 //  import (
 //    "flag"
 //    "context"
-//    "github.com/hemtjanst/bibliotek/transport/mqtt"
+//    "lib.hemtjan.st/transport/mqtt"
 //  )
 //  func main() {
 //    myCustomFlag := flag.String("custom", "", "Set up your own flags here")

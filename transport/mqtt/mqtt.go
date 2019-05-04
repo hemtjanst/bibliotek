@@ -1,4 +1,4 @@
-package mqtt
+package mqtt // import "lib.hemtjan.st/transport/mqtt"
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/goiiot/libmqtt"
-	"github.com/hemtjanst/bibliotek/device"
+	"lib.hemtjan.st/device"
 )
 
 type Packet libmqtt.PublishPacket
