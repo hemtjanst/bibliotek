@@ -120,6 +120,15 @@ func (m *mqtt) init(ctx context.Context, client mqttClient) (err error) {
 				close(ch)
 			}
 
+			if m.subRaw != nil {
+				for _, v := range m.subRaw {
+					for _, vv := range v {
+						close(vv)
+					}
+				}
+				m.subRaw = map[string][]chan *Packet{}
+			}
+
 			if subs != nil {
 				for _, chans := range subs {
 					for _, ch := range chans {
