@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/goiiot/libmqtt"
-	"github.com/hemtjanst/bibliotek/device"
+	"lib.hemtjan.st/device"
 )
 
 type EventType int

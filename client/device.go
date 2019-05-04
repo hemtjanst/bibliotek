@@ -1,10 +1,11 @@
-package client
+package client // import "lib.hemtjan.st/client"
 
 import (
 	"encoding/json"
 	"errors"
-	"github.com/hemtjanst/bibliotek/device"
-	"github.com/hemtjanst/bibliotek/feature"
+
+	"lib.hemtjan.st/device"
+	"lib.hemtjan.st/feature"
 )
 
 // Device in client package is used by applications that are talking to the actual devices,

@@ -1,8 +1,8 @@
 package server
 
 import (
-	"github.com/hemtjanst/bibliotek/device"
-	"github.com/hemtjanst/bibliotek/feature"
+	"lib.hemtjan.st/device"
+	"lib.hemtjan.st/feature"
 )
 
 // Device is used by applications that monitor or send commands to the

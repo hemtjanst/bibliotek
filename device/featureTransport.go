@@ -1,6 +1,6 @@
 package device
 
-import "github.com/hemtjanst/bibliotek/feature"
+import "lib.hemtjan.st/feature"
 
 func (d *Device) SubscribeFeature(topic string) chan []byte {
 	return d.Transport.Subscribe(topic)

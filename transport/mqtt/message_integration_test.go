@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hemtjanst/bibliotek/testutils"
+	"lib.hemtjan.st/testutils"
 	"github.com/stretchr/testify/assert"
 )
 

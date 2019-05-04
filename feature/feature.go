@@ -1,4 +1,4 @@
-package feature
+package feature // import "lib.hemtjan.st/feature"
 
 import (
 	"strconv"

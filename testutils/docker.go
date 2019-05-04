@@ -1,4 +1,4 @@
-package testutils
+package testutils // import "lib.hemtjan.st/testutils"
 
 import (
 	"fmt"

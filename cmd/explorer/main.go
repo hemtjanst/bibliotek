@@ -3,14 +3,14 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/hemtjanst/bibliotek/client"
+	"lib.hemtjan.st/client"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/hemtjanst/bibliotek/server"
-	"github.com/hemtjanst/bibliotek/transport/mqtt"
+	"lib.hemtjan.st/server"
+	"lib.hemtjan.st/transport/mqtt"
 )
 
 func main() {

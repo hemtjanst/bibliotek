@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/goiiot/libmqtt"
-	"github.com/hemtjanst/bibliotek/device"
-	"github.com/hemtjanst/bibliotek/feature"
+	"lib.hemtjan.st/device"
+	"lib.hemtjan.st/feature"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
