@@ -2,13 +2,18 @@ package feature
 
 import "strings"
 
+// Type is the type of the feature
 type Type string
 
+// Equal checks if two types are equal
 func (t Type) Equal(y Type) bool {
 	return strings.ToLower(string(t)) == strings.ToLower(string(y))
 }
 
+// All feature types
 const (
+	// HomeKit types
+
 	AccessoryFlags                        Type = "accessoryFlags"
 	AccessoryIdentifier                   Type = "accessoryIdentifier"
 	Active                                Type = "active"
@@ -153,4 +158,11 @@ const (
 	VOCDensity                            Type = "vocDensity"
 	Volume                                Type = "volume"
 	WaterLevel                            Type = "waterLevel"
+
+	// Custom types
+
+	CurrentPower   Type = "currentPower"
+	CurrentVoltage Type = "currentVoltage"
+	CurrentAmpere  Type = "currentAmpere"
+	EnergyUsed     Type = "energyUsed"
 )
