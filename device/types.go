@@ -2,13 +2,23 @@ package device
 
 import "strings"
 
+// Type is the type of device
 type Type string
 
+// Equal checks if two devices are the same
 func (t Type) Equal(y Type) bool {
 	return strings.ToLower(string(t)) == strings.ToLower(string(y))
 }
 
+// String returns the string representation of the device type
+func (t Type) String() string {
+	return string(t)
+}
+
+// All supported device types
 const (
+	// HomeKit
+
 	AccessoryInformation         Type = "accessoryInformation"
 	AirPurifier                  Type = "airPurifier"
 	AirQualitySensor             Type = "airQualitySensor"

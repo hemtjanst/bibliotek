@@ -10,6 +10,11 @@ func (t Type) Equal(y Type) bool {
 	return strings.ToLower(string(t)) == strings.ToLower(string(y))
 }
 
+// String returns the string representation of the feature
+func (t Type) String() string {
+	return string(t)
+}
+
 // All feature types
 const (
 	// HomeKit types
