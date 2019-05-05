@@ -1,4 +1,4 @@
-// Bibliotek is a library for the Hemtjänst ecosystem.
+// Package bibliotek is a library for the Hemtjänst ecosystem.
 //
 // It comes with a few different packages, most importantly
 // client, server and transport.
@@ -26,5 +26,5 @@
 // You'll likely never need them, aside from transport/mqtt.Flags()
 // so you don't have to define all the different flags for setting
 // up a connection to an MQTT broker for ya CLI utility yourself.
-
-package bibliotek
+//
+package bibliotek // import "lib.hemtjan.st"
