@@ -1,4 +1,4 @@
-package mqtt // import "lib.hemtjan.st/transport/mqtt"
+package mqtt
 
 import (
 	"context"

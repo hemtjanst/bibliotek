@@ -1,4 +1,4 @@
-package client // import "lib.hemtjan.st/client"
+package client
 
 import (
 	"encoding/json"

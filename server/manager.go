@@ -1,4 +1,4 @@
-package server // import "lib.hemtjan.st/server"
+package server
 
 import (
 	"context"

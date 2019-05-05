@@ -1,4 +1,4 @@
-package device // import "lib.hemtjan.st/device"
+package device
 
 import (
 	"errors"
