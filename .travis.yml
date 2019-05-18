@@ -23,6 +23,9 @@ cache:
     - $HOME/.cache/go-build
     - $GOPATH/pkg/mod
 before_install:
+  - docker pull eclipse-mosquitto:1.6.2
+  - docker run -d -p 127.0.0.1:1883:1883 eclipse-mosquitto:1.6.2
+  - docker ps
   - go mod download
 install: go build ./...
 script: go test -race -v -coverprofile=profile.cov $(go list ./...)
