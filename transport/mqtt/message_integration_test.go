@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"lib.hemtjan.st/testutils"
 	"github.com/stretchr/testify/assert"
+	"lib.hemtjan.st/testutils"
 )
 
 func TestDiscover(t *testing.T) {
@@ -13,8 +13,7 @@ func TestDiscover(t *testing.T) {
 		t.Skip(integrationDisabledMsg)
 	}
 
-	hostPort, cleanup := testutils.MQTTBroker()
-	defer cleanup()
+	hostPort := testutils.MQTTAddress(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	mq, err := New(ctx, &Config{Address: []string{hostPort}})
@@ -34,8 +33,7 @@ func TestResubscribe(t *testing.T) {
 		t.Skip(integrationDisabledMsg)
 	}
 
-	hostPort, cleanup := testutils.MQTTBroker()
-	defer cleanup()
+	hostPort := testutils.MQTTAddress(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	mq, err := New(ctx, &Config{Address: []string{hostPort}})
@@ -60,8 +58,7 @@ func TestUnsubscribe(t *testing.T) {
 		t.Skip(integrationDisabledMsg)
 	}
 
-	hostPort, cleanup := testutils.MQTTBroker()
-	defer cleanup()
+	hostPort := testutils.MQTTAddress(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	mq, err := New(ctx, &Config{Address: []string{hostPort}})
