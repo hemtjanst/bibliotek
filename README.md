@@ -46,8 +46,10 @@ $ go test -race -v -coverprofile=profile.cov $(go list ./...)
 
 Note that in CI the `_integration_test.go` will run too. You can
 run them locally as well by setting `BIBLIOTEK_TEST_INTEGRATION=1`.
-These tests require Docker to run as they spin up an actual MQTT
-broker.
+
+In order for these test to complete successfully you'll have to spin
+up an MQTT broker and if the MQTT broker is not found on `localhost:1883`
+specify a `host:port` string in the `MQTT_ADDRESS` environment variable.
 
 ```sh
 $ env BIBLIOTEK_TEST_INTEGRATION=1 go test -race -v -coverprofile=profile.cov $(go list ./...)
