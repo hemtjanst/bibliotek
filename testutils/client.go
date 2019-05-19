@@ -1,12 +1,20 @@
 package testutils // import "lib.hemtjan.st/testutils"
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 	"testing"
 
 	"github.com/goiiot/libmqtt"
+	"lib.hemtjan.st/client"
+	"lib.hemtjan.st/device"
 )
+
+var errNoDevices = errors.New("unable to create any devices")
 
 type dummyMqtt struct {
 	initCh chan error
@@ -65,4 +73,41 @@ func MQTTAddress(t *testing.T) string {
 	defer client.Destroy(false)
 
 	return mqttHostPort
+}
+
+type config struct {
+	Devices []struct {
+		*device.Info
+		Init *map[string]string `json:"init"`
+	} `json:"devices"`
+}
+
+// CreateDevicesFromJSON creates fake devices on the broker based
+// on the devices defined in a JSON file
+func CreateDevicesFromJSON(path string, m device.Transport) error {
+	c := &config{}
+	f, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	if err = json.Unmarshal(f, c); err != nil {
+		return err
+	}
+	if len(c.Devices) == 0 {
+		return errNoDevices
+	}
+	// Loop through config and create the devices
+	for _, info := range c.Devices {
+		d, err := client.NewDevice(info.Info, m)
+		if err != nil {
+			log.Printf("Error creating device: %v", err)
+			continue
+		}
+		if info.Init != nil {
+			for ft, v := range *info.Init {
+				d.Feature(ft).Update(v)
+			}
+		}
+	}
+	return nil
 }
