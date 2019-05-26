@@ -82,19 +82,22 @@ type config struct {
 	} `json:"devices"`
 }
 
-// CreateDevicesFromJSON creates fake devices on the broker based
+// DevicesFromJSON creates fake devices on the broker based
 // on the devices defined in a JSON file
-func CreateDevicesFromJSON(path string, m device.Transport) error {
+// When you run the returned cleanup function it will delete the devices.
+// Note that unless you then also close the transport it might still
+// announce the device(s) when it receives a discover.
+func DevicesFromJSON(path string, m device.Transport) (func(), error) {
 	c := &config{}
 	f, err := ioutil.ReadFile(path)
 	if err != nil {
-		return err
+		return func() {}, err
 	}
 	if err = json.Unmarshal(f, c); err != nil {
-		return err
+		return func() {}, err
 	}
 	if len(c.Devices) == 0 {
-		return errNoDevices
+		return func() {}, errNoDevices
 	}
 	// Loop through config and create the devices
 	for _, info := range c.Devices {
@@ -109,5 +112,11 @@ func CreateDevicesFromJSON(path string, m device.Transport) error {
 			}
 		}
 	}
-	return nil
+
+	cleanup := func() {
+		for _, info := range c.Devices {
+			client.DeleteDevice(info.Info, m)
+		}
+	}
+	return cleanup, nil
 }
