@@ -3,7 +3,6 @@ package mqtt
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -15,21 +14,22 @@ import (
 type Packet libmqtt.PublishPacket
 
 type mqtt struct {
-	deviceState   chan *device.State
-	client        mqttClient
-	addr          string
-	initCh        chan error
-	sub           map[string][]chan []byte
-	subRaw        map[string][]chan *Packet
-	willMap       map[string][]string
-	willID        string
-	discoverSub   []chan struct{}
-	discoverSeen  bool
-	discoverSent  bool
-	discoverDelay time.Duration
-	announceTopic string
-	discoverTopic string
-	leaveTopic    string
+	deviceState    chan *device.State
+	client         mqttClient
+	addr           string
+	initCh         chan error
+	sub            map[string][]chan []byte
+	subRaw         map[string][]chan *Packet
+	willMap        map[string][]string
+	willID         string
+	discoverSub    []chan struct{}
+	discoverSeen   bool
+	discoverSent   bool
+	discoverDelay  time.Duration
+	reconnectDelay time.Duration
+	announceTopic  string
+	discoverTopic  string
+	leaveTopic     string
 	sync.RWMutex
 }
 
@@ -41,12 +41,13 @@ func New(ctx context.Context, c *Config) (m MQTT, err error) {
 		return
 	}
 	mq := &mqtt{
-		discoverDelay: c.DiscoverDelay,
-		willID:        c.ClientID,
-		announceTopic: c.AnnounceTopic,
-		discoverTopic: c.DiscoverTopic,
-		leaveTopic:    c.LeaveTopic,
-		willMap:       map[string][]string{},
+		discoverDelay:  c.DiscoverDelay,
+		reconnectDelay: c.ReconnectDelay,
+		willID:         c.ClientID,
+		announceTopic:  c.AnnounceTopic,
+		discoverTopic:  c.DiscoverTopic,
+		leaveTopic:     c.LeaveTopic,
+		willMap:        map[string][]string{},
 	}
 	opts := []libmqtt.Option{
 		libmqtt.WithRouter(newRouter(mq)),
@@ -84,6 +85,9 @@ func (m *mqtt) init(ctx context.Context, client mqttClient) (err error) {
 	if m.discoverDelay == 0 {
 		m.discoverDelay = 5 * time.Second
 	}
+	if m.reconnectDelay == 0 {
+		m.reconnectDelay = 5 * time.Second
+	}
 
 	m.initCh = make(chan error)
 	m.sub = map[string][]chan []byte{}
@@ -108,6 +112,8 @@ func (m *mqtt) init(ctx context.Context, client mqttClient) (err error) {
 			m.discoverSub = []chan struct{}{}
 			subs := m.sub
 			m.sub = map[string][]chan []byte{}
+			subRaw := m.subRaw
+			m.subRaw = map[string][]chan *Packet{}
 			stateCh := m.deviceState
 			m.deviceState = nil
 			m.Unlock()
@@ -120,13 +126,12 @@ func (m *mqtt) init(ctx context.Context, client mqttClient) (err error) {
 				close(ch)
 			}
 
-			if m.subRaw != nil {
-				for _, v := range m.subRaw {
+			if subRaw != nil {
+				for _, v := range subRaw {
 					for _, vv := range v {
 						close(vv)
 					}
 				}
-				m.subRaw = map[string][]chan *Packet{}
 			}
 
 			if subs != nil {
@@ -142,24 +147,29 @@ func (m *mqtt) init(ctx context.Context, client mqttClient) (err error) {
 	return
 }
 
-func (m *mqtt) onConnect(server string, code byte, err error) {
+func (m *mqtt) onConnect(server string, _code byte, err error) {
 	m.Lock()
 	defer m.Unlock()
+	code := Code(_code)
 
 	if code != libmqtt.CodeSuccess && err == nil {
-		err = fmt.Errorf("error code %d", int(code))
+		err = code
 	}
 
 	if m.initCh != nil {
 		if err != nil {
 			m.initCh <- err
+			return
 		} else {
 			close(m.initCh)
 		}
 	}
 
 	if err != nil {
-		log.Printf("MQTT Connect Error: %s (%x) %v", server, code, err)
+		log.Printf("MQTT Connect Error: %s (0x%02x) %v", server, code, err)
+		time.AfterFunc(m.reconnectDelay, func() {
+			m.client.Connect(m.onConnect)
+		})
 		return
 	}
 

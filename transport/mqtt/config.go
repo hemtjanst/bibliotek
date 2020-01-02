@@ -42,6 +42,9 @@ type Config struct {
 	// The delay should be long enough to be able to receive all retained announcements, but not too long
 	// to make initial startup too slow. Default is 5 seconds
 	DiscoverDelay time.Duration
+
+	// ReconnectDelay is the time to wait before attempting a reconnect on connection error. Default is 5 seconds
+	ReconnectDelay time.Duration
 }
 
 func (c *Config) check() error {
@@ -93,6 +96,7 @@ func (c *Config) opts() (o []libmqtt.Option) {
 		libmqtt.WithDialTimeout(5),
 		libmqtt.WithClientID(c.ClientID),
 		libmqtt.WithWill(c.LeaveTopic, 1, false, []byte(c.ClientID)),
+		libmqtt.WithAutoReconnect(false),
 	}
 
 	if c.TLS != nil {

@@ -3,6 +3,7 @@ package mqtt
 import (
 	"context"
 	"errors"
+	"net"
 	"testing"
 	"time"
 
@@ -13,10 +14,15 @@ import (
 
 type MockMqttClient struct {
 	mock.Mock
+	OnConnect   func(libmqtt.ConnHandler)
 	ConnectErr  error
 	ConnectCode byte
 	connHandler libmqtt.ConnHandler
 }
+type MockErrTimeout string
+
+func (m MockErrTimeout) Error() string { return string(m) }
+func (MockErrTimeout) Timeout() bool   { return true }
 
 func (m *MockMqttClient) TriggerReconnect(code byte, err error) {
 	m.connHandler("127.0.0.1:1883", code, err)
@@ -25,9 +31,11 @@ func (m *MockMqttClient) TriggerReconnect(code byte, err error) {
 func (m *MockMqttClient) Connect(handler libmqtt.ConnHandler) {
 	m.Called(handler)
 	m.connHandler = handler
-	go func() {
-		handler("127.0.0.1:1883", m.ConnectCode, m.ConnectErr)
-	}()
+	if m.OnConnect != nil {
+		go m.OnConnect(handler)
+	} else {
+		go handler("127.0.0.1:1883", m.ConnectCode, m.ConnectErr)
+	}
 }
 func (m *MockMqttClient) Publish(p ...*libmqtt.PublishPacket) {
 	for _, msg := range p {
@@ -80,6 +88,48 @@ func TestClient(t *testing.T) {
 		client.TriggerReconnect(libmqtt.CodeSuccess, nil)
 	}
 
+	client.On("Destroy", false).Return()
+	cancel()
+	time.Sleep(5 * time.Millisecond)
+	client.AssertExpectations(t)
+}
+
+func TestClientReconnect(t *testing.T) {
+	nc := make(chan struct{}, 2)
+
+	client := &MockMqttClient{
+		OnConnect: func(h libmqtt.ConnHandler) {
+			h("127.0.0.1:1883", libmqtt.CodeSuccess, nil)
+			_, ok := <-nc
+			if !ok {
+				return
+			}
+			h("127.0.0.1:1883", 255, &net.OpError{
+				Op:     "dial",
+				Net:    "tcp",
+				Source: nil,
+				Addr:   nil,
+				Err:    MockErrTimeout("i/o timeout"),
+			})
+		},
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	cl := &mqtt{
+		reconnectDelay: 500 * time.Millisecond,
+		discoverDelay:  500 * time.Millisecond,
+	}
+
+	client.On("Connect", mock.Anything).Return()
+
+	err := cl.init(ctx, client)
+	assert.Nil(t, err)
+	client.AssertNumberOfCalls(t, "Connect", 1)
+
+	client.On("Connect", mock.Anything).Return()
+	nc <- struct{}{}
+	close(nc)
 	client.On("Destroy", false).Return()
 	cancel()
 	time.Sleep(5 * time.Millisecond)
