@@ -162,7 +162,9 @@ func (m *mqtt) Publish(topic string, payload []byte, retain bool) {
 	)
 }
 
-func (m *mqtt) Unsubscribe(topic string) bool {
+// TODO: Make UnsubscribeRaw()?
+
+func (m *mqtt) Unsubscribe(topic string) (found bool) {
 	m.Lock()
 	defer m.Unlock()
 	if v, ok := m.sub[topic]; ok {
@@ -171,14 +173,31 @@ func (m *mqtt) Unsubscribe(topic string) bool {
 		}
 		delete(m.sub, topic)
 		m.client.UnSubscribe(topic)
-		return true
+		found = true
 	}
-	return false
+	if m.subRaw == nil {
+		return
+	}
+	if v, ok := m.subRaw[topic]; ok {
+		for _, ch := range v {
+			close(ch)
+		}
+		delete(m.sub, topic)
+		if !found {
+			m.client.UnSubscribe(topic)
+			found = true
+		}
+	}
+	return
 }
 
 func (m *mqtt) Resubscribe(oldTopic, newTopic string) bool {
 	m.Lock()
 	defer m.Unlock()
+	keep := false
+	if m.subRaw != nil {
+		_, keep = m.subRaw[oldTopic]
+	}
 	if v, ok := m.sub[oldTopic]; ok {
 		if _, ok := m.sub[newTopic]; !ok {
 			m.sub[newTopic] = v
@@ -189,7 +208,9 @@ func (m *mqtt) Resubscribe(oldTopic, newTopic string) bool {
 			m.sub[newTopic] = append(m.sub[newTopic], v...)
 		}
 		delete(m.sub, oldTopic)
-		m.client.UnSubscribe(oldTopic)
+		if !keep {
+			m.client.UnSubscribe(oldTopic)
+		}
 		return true
 	}
 	return false

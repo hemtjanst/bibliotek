@@ -8,6 +8,10 @@ import (
 func (m *mqtt) SubscribeRaw(topic string) chan *Packet {
 	m.Lock()
 	defer m.Unlock()
+	if m.subRaw == nil || m.client == nil {
+		// Probably not started
+		return nil
+	}
 	c := make(chan *Packet, 5)
 
 	if _, ok := m.subRaw[topic]; ok {
@@ -33,7 +37,12 @@ func (m *mqtt) OnRaw(p *libmqtt.PublishPacket) {
 	}
 	m.RUnlock()
 	for _, ch := range chans {
-		ch <- (*Packet)(p)
+		func() {
+			defer func() {
+				_ = recover()
+			}()
+			ch <- (*Packet)(p)
+		}()
 	}
 
 }
