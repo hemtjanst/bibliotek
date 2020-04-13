@@ -112,14 +112,16 @@ func (m *mqtt) Start() (bool, error) {
 		m.Unlock()
 		return false, ErrIsCancelled
 	}
-
-	m.errCh = make(chan error)
+	errCh := make(chan error)
+	m.errCh = errCh
 	if m.sub == nil {
 		m.sub = map[string][]chan []byte{}
 	}
 	if m.subRaw == nil {
 		m.subRaw = map[string][]chan *Packet{}
 	}
+	cl := m.client
+	m.Unlock()
 
 	defer func() {
 		m.Lock()
@@ -131,21 +133,12 @@ func (m *mqtt) Start() (bool, error) {
 			close(ch)
 		}
 	}()
-	stopCh := make(chan struct{})
-	m.stopCh = append(m.stopCh, stopCh)
-	if m.ctx != nil {
-		go func(ctx context.Context) {
-			select {
-			case <-ctx.Done():
-				m.destroy()
-			case <-stopCh:
-				return
-			}
-		}(m.ctx)
+	if cl == nil {
+		return false, ErrIsCancelled
 	}
-	m.Unlock()
-	m.client.Connect(m.onConnect)
-	err := <-m.errCh
+
+	cl.Connect(m.onConnect)
+	err := <-errCh
 	return !m.isCancelled(), err
 }
 
@@ -162,13 +155,6 @@ func (m *mqtt) destroy() {
 	} else {
 		close(stopCh)
 	}
-	m.Unlock()
-
-	if cl != nil {
-		cl.Destroy(true)
-	}
-
-	m.Lock()
 	if m.errCh != nil {
 		close(m.errCh)
 		m.errCh = nil
@@ -179,6 +165,10 @@ func (m *mqtt) destroy() {
 	m.deviceState = nil
 	m.client = nil
 	m.Unlock()
+
+	if cl != nil {
+		cl.Destroy(true)
+	}
 
 	if stateCh != nil {
 		close(stateCh)
@@ -258,12 +248,14 @@ func (m *mqtt) sendDiscover() {
 	time.AfterFunc(m.discoverDelay, func() {
 		m.Lock()
 		defer m.Unlock()
-		m.discoverSent = true
-		m.client.Publish(&libmqtt.PublishPacket{
-			TopicName: m.discoverTopic,
-			IsRetain:  true,
-			Payload:   []byte("1"),
-		})
+		if m.client != nil {
+			m.discoverSent = true
+			m.client.Publish(&libmqtt.PublishPacket{
+				TopicName: m.discoverTopic,
+				IsRetain:  true,
+				Payload:   []byte("1"),
+			})
+		}
 	})
 }
 

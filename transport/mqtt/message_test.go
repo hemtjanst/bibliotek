@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/goiiot/libmqtt"
-	"lib.hemtjan.st/device"
-	"lib.hemtjan.st/feature"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"lib.hemtjan.st/device"
+	"lib.hemtjan.st/feature"
 )
 
 func TestMessage(t *testing.T) {
@@ -21,16 +21,14 @@ func TestMessage(t *testing.T) {
 		ConnectCode: libmqtt.CodeSuccess,
 	}
 
-	cl := &mqtt{
-		deviceState:   make(chan *device.State, 16),
-		discoverDelay: 1 * time.Millisecond,
-	}
-
 	client.On("Connect", mock.Anything).Return()
 	client.On("Publish", "discover").Return()
 	client.On("Subscribe", "announce/#").Return()
-	err := cl.init(nil, client)
-	assert.Nil(t, err)
+	client.On("Destroy", true).Return()
+
+	cl, cancel, wg := startMockClient(t, client, nil)
+	devCh := cl.DeviceState()
+	time.Sleep(10 * time.Millisecond)
 
 	cl.OnAnnounce(mockDev("announce/teapot", &device.Info{
 		Name:         "I'm a teapot",
@@ -43,9 +41,12 @@ func TestMessage(t *testing.T) {
 		},
 	}))
 
-	dev := <-cl.deviceState
+	dev := <-devCh
 
 	assert.Equal(t, "I'm a teapot", dev.Device.Name)
+	time.Sleep(10 * time.Millisecond)
+	cancel()
+	wg.Wait()
 	time.Sleep(10 * time.Millisecond)
 	client.AssertExpectations(t)
 }
