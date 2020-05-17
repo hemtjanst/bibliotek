@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"net"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -49,7 +49,7 @@ func (c *Config) check() error {
 		var id string
 		if len(os.Args) > 0 && len(os.Args[0]) > 0 {
 			// Use executable name as first part of id
-			id = path.Base(os.Args[0])
+			id = filepath.Base(os.Args[0])
 		} else {
 			id = "htlib"
 		}

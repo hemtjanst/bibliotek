@@ -221,6 +221,12 @@ func (m *mqtt) onConnect(server string, _code byte, err error) {
 		}
 	}
 
+	if len(m.discoverSub) > 0 {
+		m.client.Subscribe(
+			&libmqtt.Topic{Name: m.discoverTopic},
+		)
+	}
+
 	if m.deviceState != nil {
 		m.sendDiscover()
 	}
