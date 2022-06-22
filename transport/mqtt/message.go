@@ -135,11 +135,17 @@ func (m *mqtt) TopicName(t EventType) string {
 func (m *mqtt) DeviceState() chan *device.State {
 	m.Lock()
 	defer m.Unlock()
+	sendDiscover := false
 	if m.deviceState == nil {
 		m.deviceState = make(chan *device.State, 10)
+		sendDiscover = true
+	}
+	ds := m.deviceState
+	m.Unlock()
+	if sendDiscover {
 		m.sendDiscover()
 	}
-	return m.deviceState
+	return ds
 }
 
 func (m *mqtt) PublishMeta(topic string, payload []byte) {
@@ -166,66 +172,75 @@ func (m *mqtt) Publish(topic string, payload []byte, retain bool) {
 
 func (m *mqtt) Unsubscribe(topic string) (found bool) {
 	m.Lock()
-	defer m.Unlock()
 	if v, ok := m.sub[topic]; ok {
-		for _, ch := range v {
-			close(ch)
-		}
+		defer func() {
+			for _, ch := range v {
+				close(ch)
+			}
+		}()
 		delete(m.sub, topic)
-		m.client.UnSubscribe(topic)
 		found = true
 	}
-	if m.subRaw == nil {
-		return
-	}
-	if v, ok := m.subRaw[topic]; ok {
-		for _, ch := range v {
-			close(ch)
-		}
-		delete(m.sub, topic)
-		if !found {
-			m.client.UnSubscribe(topic)
+	if m.subRaw != nil {
+		if v, ok := m.subRaw[topic]; ok {
+			defer func() {
+				for _, ch := range v {
+					close(ch)
+				}
+			}()
+			delete(m.sub, topic)
 			found = true
 		}
+	}
+	m.Unlock()
+	if found {
+		m.client.UnSubscribe(topic)
 	}
 	return
 }
 
 func (m *mqtt) Resubscribe(oldTopic, newTopic string) bool {
 	m.Lock()
-	defer m.Unlock()
 	keep := false
+	subNew := false
 	if m.subRaw != nil {
 		_, keep = m.subRaw[oldTopic]
 	}
 	if v, ok := m.sub[oldTopic]; ok {
 		if _, ok := m.sub[newTopic]; !ok {
 			m.sub[newTopic] = v
-			m.client.Subscribe(
-				&libmqtt.Topic{Name: newTopic},
-			)
+			subNew = true
 		} else {
 			m.sub[newTopic] = append(m.sub[newTopic], v...)
 		}
 		delete(m.sub, oldTopic)
+		m.Unlock()
 		if !keep {
 			m.client.UnSubscribe(oldTopic)
 		}
+		if subNew {
+			m.client.Subscribe(
+				&libmqtt.Topic{Name: newTopic},
+			)
+		}
 		return true
+	} else {
+		m.Unlock()
 	}
 	return false
 }
 
 func (m *mqtt) Subscribe(topic string) chan []byte {
 	m.Lock()
-	defer m.Unlock()
 	c := make(chan []byte, 5)
 
 	if _, ok := m.sub[topic]; ok {
 		m.sub[topic] = append(m.sub[topic], c)
+		m.Unlock()
 		return c
 	}
 	m.sub[topic] = []chan []byte{c}
+	m.Unlock()
 	m.client.Subscribe(
 		&libmqtt.Topic{Name: topic},
 	)
@@ -234,13 +249,14 @@ func (m *mqtt) Subscribe(topic string) chan []byte {
 
 func (m *mqtt) Discover() chan struct{} {
 	m.Lock()
-	defer m.Unlock()
 	ch := make(chan struct{}, 5)
 	m.discoverSub = append(m.discoverSub, ch)
+	discLen := len(m.discoverSub)
 	if m.discoverSeen {
 		ch <- struct{}{}
 	}
-	if len(m.discoverSub) == 1 {
+	m.Unlock()
+	if discLen == 1 {
 		m.client.Subscribe(&libmqtt.Topic{Name: m.discoverTopic})
 	}
 	return ch

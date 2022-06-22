@@ -7,18 +7,20 @@ import (
 
 func (m *mqtt) SubscribeRaw(topic string) chan *Packet {
 	m.Lock()
-	defer m.Unlock()
 	if m.subRaw == nil || m.client == nil {
 		// Probably not started
+		m.Unlock()
 		return nil
 	}
 	c := make(chan *Packet, 5)
 
 	if _, ok := m.subRaw[topic]; ok {
 		m.subRaw[topic] = append(m.subRaw[topic], c)
+		m.Unlock()
 		return c
 	}
 	m.subRaw[topic] = []chan *Packet{c}
+	m.Unlock()
 	m.client.Subscribe(
 		&libmqtt.Topic{Name: topic},
 	)

@@ -63,6 +63,7 @@ func New(ctx context.Context, c *Config) (MQTT, error) {
 
 	opts := []libmqtt.Option{
 		libmqtt.WithRouter(newRouter(m)),
+		libmqtt.WithCleanSession(true),
 	}
 	opts = append(opts, c.opts()...)
 
@@ -206,62 +207,68 @@ func (m *mqtt) destroy() {
 }
 
 func (m *mqtt) onConnect(server string, _code byte, err error) {
-	m.Lock()
-	defer m.Unlock()
-	code := Code(_code)
+	go func() {
+		m.Lock()
+		defer m.Unlock()
+		code := Code(_code)
 
-	if code != libmqtt.CodeSuccess && err == nil {
-		err = code
-	}
-
-	if err != nil {
-		if m.errCh != nil {
-			m.errCh <- err
-			return
+		if code != libmqtt.CodeSuccess && err == nil {
+			err = code
 		}
-	}
 
-	if len(m.discoverSub) > 0 {
-		m.client.Subscribe(
-			&libmqtt.Topic{Name: m.discoverTopic},
-		)
-	}
-
-	if m.deviceState != nil {
-		m.sendDiscover()
-	}
-
-	seen := map[string]bool{}
-	for topic := range m.sub {
-		seen[topic] = true
-		m.client.Subscribe(
-			&libmqtt.Topic{Name: topic},
-		)
-	}
-	for topic := range m.subRaw {
-		if _, ok := seen[topic]; ok {
-			continue
+		if err != nil {
+			if m.errCh != nil {
+				m.errCh <- err
+				return
+			}
 		}
-		m.client.Subscribe(
-			&libmqtt.Topic{Name: topic},
-		)
-	}
+
+		if len(m.discoverSub) > 0 {
+			m.client.Subscribe(
+				&libmqtt.Topic{Name: m.discoverTopic},
+			)
+		}
+
+		if m.deviceState != nil {
+			m.sendDiscover()
+		}
+
+		seen := map[string]bool{}
+		for topic := range m.sub {
+			seen[topic] = true
+			m.client.Subscribe(
+				&libmqtt.Topic{Name: topic},
+			)
+		}
+		for topic := range m.subRaw {
+			if _, ok := seen[topic]; ok {
+				continue
+			}
+			m.client.Subscribe(
+				&libmqtt.Topic{Name: topic},
+			)
+		}
+	}()
 }
 
 func (m *mqtt) sendDiscover() {
+	m.Lock()
 	m.discoverSent = false
+	m.Unlock()
 	m.client.Subscribe(&libmqtt.Topic{Name: m.announceTopic + "/#"})
 	time.AfterFunc(m.discoverDelay, func() {
 		m.Lock()
-		defer m.Unlock()
-		if m.client != nil {
-			m.discoverSent = true
-			m.client.Publish(&libmqtt.PublishPacket{
-				TopicName: m.discoverTopic,
-				IsRetain:  true,
-				Payload:   []byte("1"),
-			})
+		if m.client == nil {
+			m.Unlock()
+			return
 		}
+		m.discoverSent = true
+		m.Unlock()
+		m.client.Publish(&libmqtt.PublishPacket{
+			TopicName: m.discoverTopic,
+			IsRetain:  true,
+			Payload:   []byte("1"),
+		})
 	})
 }
 
