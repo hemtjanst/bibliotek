@@ -28,6 +28,7 @@ type mqtt struct {
 	announceTopic string
 	discoverTopic string
 	leaveTopic    string
+	hassPrefix    string
 	ctx           context.Context
 	sync.RWMutex
 }
@@ -45,8 +46,11 @@ func New(ctx context.Context, c *Config) (MQTT, error) {
 		announceTopic: c.AnnounceTopic,
 		discoverTopic: c.DiscoverTopic,
 		leaveTopic:    c.LeaveTopic,
+		hassPrefix:    c.HassPrefix,
 		willMap:       map[string][]string{},
 		ctx:           ctx,
+		sub:           map[string][]chan []byte{},
+		subRaw:        map[string][]chan *Packet{},
 	}
 	if m.announceTopic == "" {
 		m.announceTopic = "announce"

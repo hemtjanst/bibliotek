@@ -65,4 +65,8 @@ const (
 	Valve                        Type = "valve"
 	Window                       Type = "window"
 	WindowCovering               Type = "windowCovering"
+
+	// Custom types
+	WeatherStation Type = "weatherStation"
+	EnergyMeter    Type = "energyMeter"
 )

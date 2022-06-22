@@ -165,9 +165,17 @@ const (
 	WaterLevel                            Type = "waterLevel"
 
 	// Custom types
-
-	CurrentPower   Type = "currentPower"
-	CurrentVoltage Type = "currentVoltage"
-	CurrentAmpere  Type = "currentAmpere"
-	EnergyUsed     Type = "energyUsed"
+	Color                Type = "color"
+	CurrentPower         Type = "currentPower"
+	CurrentVoltage       Type = "currentVoltage"
+	CurrentAmpere        Type = "currentAmpere"
+	EnergyUsed           Type = "energyUsed"
+	EnergyProduced       Type = "energyProduced"
+	CurrentPowerProduced Type = "currentPowerProduced"
+	Phase1Current        Type = "phase1Current"
+	Phase2Current        Type = "phase2Current"
+	Phase3Current        Type = "phase3Current"
+	Phase1Voltage        Type = "phase1Voltage"
+	Phase2Voltage        Type = "phase2Voltage"
+	Phase3Voltage        Type = "phase3Voltage"
 )

@@ -29,6 +29,9 @@ type Config struct {
 	// TLS configuration
 	TLS *tls.Config
 
+	// HassPrefix is the prefix for announcements to homeassistant.
+	HassPrefix string
+
 	// AnnounceTopic is the prefix announcements will have. Default is "announce"
 	AnnounceTopic string
 

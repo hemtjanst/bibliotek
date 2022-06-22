@@ -28,6 +28,7 @@ type FlagBoolFunc func(name string, def bool, usage string) *bool
 //    mqtt.ca                       - Path to authority certificate    (MQTT_CA_PATH)
 //    mqtt.cert                     - Path to client certificate       (MQTT_CERT_PATH)
 //    mqtt.key                      - Path to certificate key          (MQTT_KEY_PATH)
+//  topic.hass						- Topic for homeassistant          (MQTT_HASS_PREFIX)
 //  topic.announce                  - Topic for announcements          (HEMTJANST_TOPIC_ANNOUNCE)
 //  topic.discover                  - Topic for discovery              (HEMTJANST_TOPIC_DISCOVER)
 //  topic.leave                     - Topic for leaving                (HEMTJANST_TOPIC_LEAVE)
@@ -71,6 +72,7 @@ func Flags(str FlagStrFunc, b FlagBoolFunc) func() (*Config, error) {
 	if envLeaveTopic == "" {
 		envLeaveTopic = "leave"
 	}
+	envHassTopic := os.Getenv("MQTT_HASS_PREFIX")
 	var envPwd string
 	if os.Getenv("MQTT_PASSWORD") != "" {
 		// Mask environment password in --help
@@ -97,6 +99,7 @@ func Flags(str FlagStrFunc, b FlagBoolFunc) func() (*Config, error) {
 	flagAnnounceTopic := str("topic.announce", envAnnounceTopic, "Announce topic for Hemtjänst")
 	flagDiscoverTopic := str("topic.discover", envDiscoverTopic, "Discover topic for Hemtjänst")
 	flagLeaveTopic := str("topic.leave", envLeaveTopic, "Leave topic for hemtjänst")
+	flagHassTopic := str("topic.hass", envHassTopic, "Topic for HomeAssistant integration")
 
 	return func() (c *Config, err error) {
 		c = &Config{}
@@ -183,6 +186,9 @@ func Flags(str FlagStrFunc, b FlagBoolFunc) func() (*Config, error) {
 		}
 		if flagLeaveTopic != nil {
 			c.LeaveTopic = *flagLeaveTopic
+		}
+		if flagHassTopic != nil {
+			c.HassPrefix = *flagHassTopic
 		}
 		return
 	}

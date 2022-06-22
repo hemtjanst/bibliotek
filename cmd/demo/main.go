@@ -11,15 +11,18 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
+	"io/ioutil"
 	"lib.hemtjan.st/client"
 	"lib.hemtjan.st/device"
+	"lib.hemtjan.st/hass"
 	"lib.hemtjan.st/transport/mqtt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 )
 
 var (
@@ -55,6 +58,18 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	go func() {
+		for {
+			ok, err := tr.Start()
+			if err != nil {
+				log.Print(err)
+			}
+			if !ok {
+				return
+			}
+			time.Sleep(5 * time.Second)
+		}
+	}()
 
 	// Loop through config and create the devices
 	wg := sync.WaitGroup{}
@@ -90,6 +105,20 @@ func main() {
 					}
 				}
 			}()
+		}
+
+		if tr.TopicName(mqtt.TypeHassPrefix) != "" {
+			hd, err := hass.HTtoHA(info.Info)
+			if err != nil {
+				log.Printf("Error creating HASS device: %v", err)
+			} else {
+				for _, hdd := range hd {
+					hds, _ := json.MarshalIndent(hdd, "", "  ")
+					log.Print(string(hds))
+					haTopic := fmt.Sprintf("%s/%s/%s", tr.TopicName(mqtt.TypeHassPrefix), hdd.Type, hdd.UniqueId)
+					tr.Publish(haTopic, hds, true)
+				}
+			}
 		}
 
 		// Set initial values from JSON for the devices

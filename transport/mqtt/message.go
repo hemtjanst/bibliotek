@@ -14,6 +14,7 @@ const (
 	TypeAnnounce EventType = iota
 	TypeDiscover
 	TypeLeave
+	TypeHassPrefix
 )
 
 type MessageHandler interface {
@@ -126,6 +127,8 @@ func (m *mqtt) TopicName(t EventType) string {
 		return m.discoverTopic
 	case TypeLeave:
 		return m.leaveTopic
+	case TypeHassPrefix:
+		return m.hassPrefix
 	default:
 		return ""
 	}
