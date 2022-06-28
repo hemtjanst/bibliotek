@@ -134,7 +134,6 @@ func (m *mqtt) TopicName(t EventType) string {
 // DeviceState returns a channel which publishes information about new and changed devices
 func (m *mqtt) DeviceState() chan *device.State {
 	m.Lock()
-	defer m.Unlock()
 	sendDiscover := false
 	if m.deviceState == nil {
 		m.deviceState = make(chan *device.State, 10)
