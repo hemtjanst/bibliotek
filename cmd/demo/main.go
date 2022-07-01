@@ -42,8 +42,8 @@ func main() {
 	flag.Parse()
 
 	// Set up context and signal interrupts
-	ctx, cancel := context.WithCancel(context.Background())
-	go waitSig(cancel)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	// Read config
 	c, err := readCfg()
@@ -119,15 +119,6 @@ func main() {
 
 	// Wait for all goroutines to end, or exit if no devices were started
 	wg.Wait()
-}
-
-func waitSig(cancel func()) {
-
-	quit := make(chan os.Signal)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
-	<-quit
-	cancel()
 }
 
 func readCfg() (*Config, error) {
