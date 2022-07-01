@@ -11,15 +11,16 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"io/ioutil"
 	"lib.hemtjan.st/client"
 	"lib.hemtjan.st/device"
 	"lib.hemtjan.st/transport/mqtt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 )
 
 var (
@@ -55,6 +56,22 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	go func() {
+		defer cancel()
+		for {
+			ok, err := tr.Start()
+			if err != nil {
+				log.Printf("Error from MQTT: %s", err)
+			}
+			// If ok=true then the error is recoverable
+			if !ok {
+				break
+			}
+			log.Printf("Disconnected from MQTT, retrying in 3 seconds")
+			time.Sleep(3 * time.Second)
+		}
+	}()
 
 	// Loop through config and create the devices
 	wg := sync.WaitGroup{}

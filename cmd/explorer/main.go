@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"lib.hemtjan.st/server"
 	"lib.hemtjan.st/transport/mqtt"
@@ -30,11 +31,25 @@ func main() {
 
 	mq, err := mqtt.New(ctx, mCfg())
 
-	log.Printf("Connected!")
-
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	go func() {
+		defer cancel()
+		for {
+			ok, err := mq.Start()
+			if err != nil {
+				log.Printf("Error from MQTT: %s", err)
+			}
+			// If ok=true then the error is recoverable
+			if !ok {
+				break
+			}
+			log.Printf("Disconnected from MQTT, retrying in 3 seconds")
+			time.Sleep(3 * time.Second)
+		}
+	}()
 
 	srv := server.New(mq)
 
