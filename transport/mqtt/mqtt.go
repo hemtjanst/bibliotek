@@ -207,46 +207,43 @@ func (m *mqtt) destroy() {
 }
 
 func (m *mqtt) onConnect(server string, _code byte, err error) {
+
+	// Suppress unused parameter warning
+	_ = server
+
+	m.Lock()
+	defer m.Unlock()
+	code := Code(_code)
+
+	if code != libmqtt.CodeSuccess && err == nil {
+		err = code
+	}
+
+	if err != nil {
+		if m.errCh != nil {
+			m.errCh <- err
+			return
+		}
+	}
+	sub := map[string]bool{}
+	doDiscover := m.deviceState != nil
+
+	if len(m.discoverSub) > 0 {
+		sub[m.discoverTopic] = true
+	}
+
+	for topic := range m.sub {
+		sub[topic] = true
+	}
+	for topic := range m.subRaw {
+		sub[topic] = true
+	}
 	go func() {
-		m.Lock()
-		defer m.Unlock()
-		code := Code(_code)
-
-		if code != libmqtt.CodeSuccess && err == nil {
-			err = code
+		for topic := range sub {
+			m.client.Subscribe(&libmqtt.Topic{Name: topic})
 		}
-
-		if err != nil {
-			if m.errCh != nil {
-				m.errCh <- err
-				return
-			}
-		}
-
-		if len(m.discoverSub) > 0 {
-			m.client.Subscribe(
-				&libmqtt.Topic{Name: m.discoverTopic},
-			)
-		}
-
-		if m.deviceState != nil {
+		if doDiscover {
 			m.sendDiscover()
-		}
-
-		seen := map[string]bool{}
-		for topic := range m.sub {
-			seen[topic] = true
-			m.client.Subscribe(
-				&libmqtt.Topic{Name: topic},
-			)
-		}
-		for topic := range m.subRaw {
-			if _, ok := seen[topic]; ok {
-				continue
-			}
-			m.client.Subscribe(
-				&libmqtt.Topic{Name: topic},
-			)
 		}
 	}()
 }
