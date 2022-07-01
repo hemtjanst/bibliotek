@@ -18,15 +18,8 @@ func main() {
 	flgDelete := flag.String("delete", "", "Delete device (by topic)")
 	flag.Parse()
 
-	ctx, cancel := context.WithCancel(context.Background())
-
-	go func() {
-		quit := make(chan os.Signal)
-		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
-		<-quit
-		cancel()
-	}()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	mq, err := mqtt.New(ctx, mCfg())
 
@@ -90,4 +83,5 @@ func main() {
 		log.Fatal(err)
 	}
 
+	<-ctx.Done()
 }
