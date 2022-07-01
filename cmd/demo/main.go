@@ -58,7 +58,7 @@ func main() {
 	}
 
 	go func() {
-		defer cancel()
+		defer stop()
 		for {
 			ok, err := tr.Start()
 			if err != nil {
