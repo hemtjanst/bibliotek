@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"html/template"
-	"lib.hemtjan.st/client"
 	"log"
 	"net/http"
 	"os"
@@ -14,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"lib.hemtjan.st/client"
 	"lib.hemtjan.st/server"
 	"lib.hemtjan.st/transport/mqtt"
 )
@@ -28,7 +28,6 @@ func main() {
 	defer stop()
 
 	mq, err := mqtt.New(ctx, mCfg())
-
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -211,23 +210,46 @@ func indexFunc(getDevices func() []server.Device) http.HandlerFunc {
 const htmlIndex = `<!DOCTYPE html>
 <html>
 <head>
+	<style>
+		html {
+			width: 100%;
+			max-width: 1000px;
+			margin: 0 auto;
+		}
+		table {
+			width: 100%;
+		}
+		.btn {
+			border: 0.1em solid red;
+			border-radius: 0.25em;
+			display: inline-block;
+			padding: 0.1em
+		}
+		.topic {
+			font-family: monospace;
+		}
+	</style>
+</head>
 <body>
 
 <table>
-<tr>
-<th>Action</th>
-<th>ID</th>
-<th>Name</th>
-<th>Info</th>
-</tr>
+<thead>
+	<tr>
+		<th scope="col">Action</th>
+		<th scope="col">ID</th>
+		<th scope="col">Name</th>
+		<th scope="col">Info</th>
+	</tr>
+</thead>
+<tbody>
 {{ range $d := . }}
 <tr>
-  <td><a href="/delete?id={{$d.Id}}">Delete</a></td>
-  <td>{{$d.Id}}</td>
+  <td><a class="btn" role="button" href="/delete?id={{$d.Id}}">Delete</a></td>
+  <td class="topic">{{$d.Id}}</td>
   <td>{{$d.Name}}</td>
   <td>{{$d.Manufacturer}} {{$d.Model}}</td>
 </tr>
-
 {{ end }}
+</tbody>
 </table>
 `
