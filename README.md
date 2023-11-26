@@ -1,4 +1,4 @@
-# 🏛️ Bibliotek 📚 [![Build Status](https://travis-ci.org/hemtjanst/bibliotek.svg?branch=master)](https://travis-ci.org/hemtjanst/bibliotek) ![GitHub release](https://img.shields.io/github/release/hemtjanst/bibliotek.svg) [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/lib.hemtjan.st/)
+# 🏛️ Bibliotek 📚 [![CI](https://github.com/hemtjanst/bibliotek/workflows/CI/badge.svg?branch=master)](https://github.com/hemtjanst/bibliotek/actions?query=workflow%3ACI) ![GitHub release](https://img.shields.io/github/release/hemtjanst/bibliotek.svg) [![go.dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/lib.hemtjan.st/)
 
 Bibliotek ('library' in Swedish) provides common primitives and utilities for
 integrating with and extending the Hemtjänst platform.
