@@ -7,11 +7,11 @@ import (
 
 // Info holds information about a feature
 type Info struct {
-	Min      int    `json:"min,omitempty"`
-	Max      int    `json:"max,omitempty"`
-	Step     int    `json:"step,omitempty"`
-	GetTopic string `json:"getTopic,omitempty"`
-	SetTopic string `json:"setTopic,omitempty"`
+	Min      int    `json:"min,omitempty" yaml:"min,omitempty"`
+	Max      int    `json:"max,omitempty" yaml:"max,omitempty"`
+	Step     int    `json:"step,omitempty" yaml:"step,omitempty"`
+	GetTopic string `json:"getTopic,omitempty" yaml:"getTopic,omitempty"`
+	SetTopic string `json:"setTopic,omitempty" yaml:"setTopic,omitempty"`
 }
 
 // Feature represents a feature of a device

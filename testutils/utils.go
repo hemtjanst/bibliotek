@@ -78,8 +78,8 @@ func MQTTAddress(t *testing.T) string {
 type config struct {
 	Devices []struct {
 		*device.Info
-		Init *map[string]string `json:"init"`
-	} `json:"devices"`
+		Init *map[string]string `json:"init" yaml:"init"`
+	} `json:"devices" yaml:"devices"`
 }
 
 // DevicesFromJSON creates fake devices on the broker based

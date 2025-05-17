@@ -9,15 +9,15 @@ import (
 )
 
 type Info struct {
-	Topic        string                   `json:"topic"`
-	Name         string                   `json:"name"`
-	Manufacturer string                   `json:"manufacturer"`
-	Model        string                   `json:"model"`
-	SerialNumber string                   `json:"serialNumber"`
-	Type         string                   `json:"type"`
-	LastWillID   string                   `json:"lastWillID,omitempty"`
-	Features     map[string]*feature.Info `json:"feature"`
-	Reachable    bool                     `json:"-"`
+	Topic        string                   `json:"topic" yaml:"topic"`
+	Name         string                   `json:"name" yaml:"name"`
+	Manufacturer string                   `json:"manufacturer" yaml:"manufacturer"`
+	Model        string                   `json:"model" yaml:"model"`
+	SerialNumber string                   `json:"serialNumber" yaml:"serialNumber"`
+	Type         string                   `json:"type" yaml:"type"`
+	LastWillID   string                   `json:"lastWillID,omitempty" yaml:"lastWillID,omitempty"`
+	Features     map[string]*feature.Info `json:"feature" yaml:"feature"`
+	Reachable    bool                     `json:"-" yaml:"-"`
 }
 
 type Device struct {

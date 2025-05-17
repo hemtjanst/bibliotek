@@ -32,8 +32,8 @@ var (
 type Config struct {
 	Devices []struct {
 		*device.Info
-		Init *map[string]string `json:"init"`
-	} `json:"devices"`
+		Init *map[string]string `json:"init" yaml:"init"`
+	} `json:"devices" yaml:"devices"`
 }
 
 func main() {
