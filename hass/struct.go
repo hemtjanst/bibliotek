@@ -41,10 +41,24 @@ type DeviceInfo struct {
 	Model            string     `json:"model,omitempty"`
 	Name             string     `json:"name,omitempty"`
 	SwVersion        string     `json:"sw_version,omitempty"`
+	SerialNumber     string     `json:"serial_number,omitempty"`
+}
+
+type Origin struct {
+	Name       string `json:"name,omitempty" yaml:"name,omitempty"`
+	SwVersion  string `json:"sw_version,omitempty" yaml:"sw_version,omitempty"`
+	SupportUrl string `json:"support_url,omitempty" yaml:"support_url,omitempty"`
 }
 
 type Device struct {
-	Type                           string         `json:"-"`
+	Device     *DeviceInfo           `json:"device,omitempty" yaml:"device,omitempty"`
+	Origin     *Origin               `json:"origin,omitempty" yaml:"origin,omitempty"`
+	Components map[string]*Component `json:"components,omitempty" yaml:"components,omitempty"`
+	StateTopic string                `json:"state_topic,omitempty" yaml:"state_topic,omitempty"`
+}
+
+type Component struct {
+	Platform                       string         `json:"p,omitempty" yaml:"p,omitempty"`
 	BaseTopic                      string         `json:"~,omitempty"`
 	ActionTopic                    string         `json:"act_t,omitempty"`
 	ActionTemplate                 string         `json:"act_tpl,omitempty"`
