@@ -1,9 +1,10 @@
-module lib.hemtjan.st
+module lib.hemtjan.st/v2
 
-go 1.12
+go 1.24
+
+require github.com/eclipse/paho.golang v0.22.0
 
 require (
-	github.com/goiiot/libmqtt v0.0.0-20181213095547-6fed8272b13b
-	github.com/google/uuid v1.1.1
-	github.com/stretchr/testify v1.3.0
+	github.com/gorilla/websocket v1.5.3 // indirect
+	golang.org/x/net v0.27.0 // indirect
 )
