@@ -1,7 +1,7 @@
 package component
 
 import (
-	"fmt"
+	"path"
 
 	"lib.hemtjan.st/v2/class/device"
 	"lib.hemtjan.st/v2/class/state"
@@ -33,7 +33,7 @@ func NewSensor(name, id string, class device.Class, state state.Class, unit unit
 			Name:        name,
 			Platform:    platform.Sensor,
 			DeviceClass: class,
-			StateTopic:  fmt.Sprintf("homeassistant/sensor/%s/state", id),
+			StateTopic:  path.Join("homeassistant", "sensor", id, "state"),
 		},
 		StateCh: make(chan string),
 		Unit:    unit,

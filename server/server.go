@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/url"
+	"path"
 	"slices"
 	"sync"
 	"time"
@@ -162,7 +163,7 @@ func (s *Server) Start(ctx context.Context) error {
 }
 
 func (s *Server) WillTopic() string {
-	return "homeassistant/client/" + s.pahoConfig.ClientID + "/status"
+	return path.Join("homeassistant", "client", s.pahoConfig.ClientID, "status")
 }
 
 func New(ctx context.Context, log *slog.Logger, u string, clientID string) (*Server, error) {
@@ -187,7 +188,7 @@ func New(ctx context.Context, log *slog.Logger, u string, clientID string) (*Ser
 			SessionExpiryInterval:         60,
 			WillMessage: &paho.WillMessage{
 				QoS:     2,
-				Topic:   "homeassistant/client/" + clientID + "/status",
+				Topic:   path.Join("homeassistant", "client", clientID, "status"),
 				Payload: []byte("offline"),
 			},
 			OnConnectionUp: func(cm *autopaho.ConnectionManager, connAck *paho.Connack) {
@@ -219,7 +220,7 @@ func New(ctx context.Context, log *slog.Logger, u string, clientID string) (*Ser
 				defer cancel()
 				_, err = cm.Publish(rctx, &paho.Publish{
 					QoS:     2,
-					Topic:   "homeassistant/client/" + clientID + "/status",
+					Topic:   path.Join("homeassistant", "client", clientID, "status"),
 					Payload: []byte("online"),
 				})
 

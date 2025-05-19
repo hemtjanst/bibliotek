@@ -1,6 +1,8 @@
 package device
 
 import (
+	"path"
+
 	"lib.hemtjan.st/v2/component"
 )
 
@@ -14,7 +16,7 @@ type Device struct {
 }
 
 func (d *Device) DiscoveryTopic() string {
-	return "homeassistant/device/" + d.Info.ID + "/config"
+	return path.Join("homeassistant", "device", d.Info.ID, "config")
 }
 
 func (d *Device) SetComponent(name string, comp component.Settable) error {
