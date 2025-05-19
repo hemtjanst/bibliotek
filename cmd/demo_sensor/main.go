@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -32,7 +33,11 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	srv := check1(server.New(ctx, os.Getenv("MQTT_ADDRESS"), "bibliotek-demo-sensor"))
+	logger := slog.New(
+		slog.NewTextHandler(os.Stdout, nil),
+	)
+
+	srv := check1(server.New(ctx, logger, os.Getenv("MQTT_ADDRESS"), "bibliotek-demo-sensor"))
 	check(srv.Start(ctx))
 
 	sensor := component.NewTempSensor("Temperature", "bibliotek_demo_temp")

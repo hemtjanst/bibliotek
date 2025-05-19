@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"log/slog"
 	"net/url"
 	"slices"
 	"sync"
@@ -19,7 +19,9 @@ import (
 type Server struct {
 	Devices []*device.Device
 
-	subscribe  []string
+	subscribe []string
+
+	logger     *slog.Logger
 	reqTimeout time.Duration
 
 	pahoConfig autopaho.ClientConfig
@@ -152,7 +154,7 @@ func (s *Server) Start(ctx context.Context) error {
 			}
 			for _, dev := range s.Devices {
 				if err = s.publishDevice(ctx, s.pahoMgr, dev); err != nil {
-					fmt.Printf("Unable to publish device: %s\n", err)
+					s.logger.Error("unable to publish device", slog.String("error", err.Error()))
 				}
 			}
 		}
@@ -163,7 +165,7 @@ func (s *Server) WillTopic() string {
 	return "homeassistant/client/" + s.pahoConfig.ClientID + "/status"
 }
 
-func New(ctx context.Context, u string, clientID string) (*Server, error) {
+func New(ctx context.Context, log *slog.Logger, u string, clientID string) (*Server, error) {
 	srv, err := url.Parse(u)
 	if err != nil {
 		return nil, err
@@ -174,8 +176,11 @@ func New(ctx context.Context, u string, clientID string) (*Server, error) {
 	var s *Server
 	s = &Server{
 		reqTimeout: 5 * time.Second,
+		logger:     log,
 		pahoRouter: r,
 		pahoConfig: autopaho.ClientConfig{
+			Errors:                        slog.NewLogLogger(log.Handler(), slog.LevelError),
+			PahoErrors:                    slog.NewLogLogger(log.Handler(), slog.LevelError),
 			ServerUrls:                    []*url.URL{srv},
 			KeepAlive:                     20,
 			CleanStartOnInitialConnection: false,
@@ -200,13 +205,13 @@ func New(ctx context.Context, u string, clientID string) (*Server, error) {
 					defer cancel()
 					_, err := cm.Subscribe(rctx, &paho.Subscribe{Subscriptions: subs})
 					if err != nil {
-						fmt.Printf("Unable to subscribe: %s\n", err)
+						s.logger.Error("unable to subscribe", slog.String("error", err.Error()))
 					}
 				}
 
 				for _, dev := range devs {
 					if err = s.publishDevice(ctx, cm, dev); err != nil {
-						fmt.Printf("Unable to publish device: %s\n", err)
+						s.logger.Error("unable to publish device", slog.String("error", err.Error()))
 					}
 				}
 
@@ -219,21 +224,21 @@ func New(ctx context.Context, u string, clientID string) (*Server, error) {
 				})
 
 				if err != nil {
-					fmt.Printf("Unable to publish status: %s\n", err)
+					s.logger.Error("unable to publish status", slog.String("error", err.Error()))
 				}
 
-				fmt.Println("mqtt connection up")
+				s.logger.Info("MQTT connected")
 			},
-			OnConnectError: func(err error) { fmt.Printf("error whilst attempting connection: %s\n", err) },
+			OnConnectError: func(err error) { s.logger.Error("unable to connect", slog.String("error", err.Error())) },
 			ClientConfig: paho.ClientConfig{
 				ClientID:      clientID,
 				Router:        r,
-				OnClientError: func(err error) { fmt.Printf("client error: %s\n", err) },
+				OnClientError: func(err error) { s.logger.Error("client issue", slog.String("error", err.Error())) },
 				OnServerDisconnect: func(d *paho.Disconnect) {
 					if d.Properties != nil {
-						fmt.Printf("server requested disconnect: %s\n", d.Properties.ReasonString)
+						s.logger.Info("server requested disconnect", slog.String("reason", d.Properties.ReasonString))
 					} else {
-						fmt.Printf("server requested disconnect; reason code: %d\n", d.ReasonCode)
+						s.logger.Info("server requested disconnect", slog.Int("code", int(d.ReasonCode)))
 					}
 				},
 			},
