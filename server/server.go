@@ -13,8 +13,8 @@ import (
 	"github.com/eclipse/paho.golang/autopaho"
 	"github.com/eclipse/paho.golang/paho"
 
-	"lib.hemtjan.st/v2/component"
-	"lib.hemtjan.st/v2/device"
+	"lib.hemtjan.st/component"
+	"lib.hemtjan.st/device"
 )
 
 type Server struct {

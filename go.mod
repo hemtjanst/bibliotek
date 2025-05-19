@@ -1,4 +1,4 @@
-module lib.hemtjan.st/v2
+module lib.hemtjan.st
 
 go 1.24
 

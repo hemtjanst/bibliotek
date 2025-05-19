@@ -11,9 +11,9 @@ import (
 	"syscall"
 	"time"
 
-	"lib.hemtjan.st/v2/component"
-	"lib.hemtjan.st/v2/device"
-	"lib.hemtjan.st/v2/server"
+	"lib.hemtjan.st/component"
+	"lib.hemtjan.st/device"
+	"lib.hemtjan.st/server"
 )
 
 func check(err error) {

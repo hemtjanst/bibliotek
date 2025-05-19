@@ -3,8 +3,8 @@ package component
 import (
 	"encoding/json"
 
-	"lib.hemtjan.st/v2/class/device"
-	"lib.hemtjan.st/v2/platform"
+	"lib.hemtjan.st/class/device"
+	"lib.hemtjan.st/platform"
 )
 
 type Settable interface {

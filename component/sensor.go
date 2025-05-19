@@ -3,10 +3,10 @@ package component
 import (
 	"path"
 
-	"lib.hemtjan.st/v2/class/device"
-	"lib.hemtjan.st/v2/class/state"
-	"lib.hemtjan.st/v2/platform"
-	"lib.hemtjan.st/v2/unit"
+	"lib.hemtjan.st/class/device"
+	"lib.hemtjan.st/class/state"
+	"lib.hemtjan.st/platform"
+	"lib.hemtjan.st/unit"
 )
 
 var _ Settable = (*Sensor)(nil)

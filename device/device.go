@@ -3,7 +3,7 @@ package device
 import (
 	"path"
 
-	"lib.hemtjan.st/v2/component"
+	"lib.hemtjan.st/component"
 )
 
 // Device represents a device.
