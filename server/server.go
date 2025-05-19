@@ -5,21 +5,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"sync"
-
-	"lib.hemtjan.st/v2/component"
-	"lib.hemtjan.st/v2/device"
-
 	"slices"
+	"sync"
+	"time"
 
 	"github.com/eclipse/paho.golang/autopaho"
 	"github.com/eclipse/paho.golang/paho"
+
+	"lib.hemtjan.st/v2/component"
+	"lib.hemtjan.st/v2/device"
 )
 
 type Server struct {
 	Devices []*device.Device
 
-	subscribe []string
+	subscribe  []string
+	reqTimeout time.Duration
 
 	pahoConfig autopaho.ClientConfig
 	pahoMgr    *autopaho.ConnectionManager
@@ -28,7 +29,7 @@ type Server struct {
 	sync.RWMutex
 }
 
-func (s *Server) Subscribe(topic string, handler paho.MessageHandler) error {
+func (s *Server) Subscribe(ctx context.Context, topic string, handler paho.MessageHandler) error {
 	s.Lock()
 	existing := slices.Contains(s.subscribe, topic)
 	if !existing {
@@ -38,7 +39,9 @@ func (s *Server) Subscribe(topic string, handler paho.MessageHandler) error {
 
 	s.pahoRouter.RegisterHandler(topic, handler)
 	if !existing && s.pahoMgr != nil {
-		_, err := s.pahoMgr.Subscribe(context.Background(), &paho.Subscribe{Subscriptions: []paho.SubscribeOptions{
+		rctx, cancel := timeout(ctx, s.reqTimeout)
+		defer cancel()
+		_, err := s.pahoMgr.Subscribe(rctx, &paho.Subscribe{Subscriptions: []paho.SubscribeOptions{
 			{Topic: topic},
 		}})
 		return err
@@ -47,7 +50,9 @@ func (s *Server) Subscribe(topic string, handler paho.MessageHandler) error {
 }
 
 func (s *Server) Publish(ctx context.Context, topic string, qos uint8, msg []byte) error {
-	_, err := s.pahoMgr.Publish(ctx,
+	rctx, cancel := timeout(ctx, s.reqTimeout)
+	defer cancel()
+	_, err := s.pahoMgr.Publish(rctx,
 		&paho.Publish{
 			QoS:     byte(qos),
 			Topic:   topic,
@@ -58,7 +63,7 @@ func (s *Server) Publish(ctx context.Context, topic string, qos uint8, msg []byt
 	return err
 }
 
-func (s *Server) AddDevice(device *device.Device) error {
+func (s *Server) AddDevice(ctx context.Context, device *device.Device) error {
 	s.Lock()
 	s.Devices = append(s.Devices, device)
 	cm := s.pahoMgr
@@ -84,7 +89,7 @@ func (s *Server) AddDevice(device *device.Device) error {
 						if !open {
 							return
 						}
-						_ = s.Publish(context.Background(), c.Topic, 1, []byte(msg))
+						_ = s.Publish(ctx, c.Topic, 1, []byte(msg))
 					}
 				}(c)
 			}
@@ -92,7 +97,7 @@ func (s *Server) AddDevice(device *device.Device) error {
 		if cmpCommandable, ok := cmp.(component.Commandable); ok {
 			for _, c := range cmpCommandable.CommandChannels() {
 				c := c
-				_ = s.Subscribe(c.Topic, func(publish *paho.Publish) {
+				_ = s.Subscribe(ctx, c.Topic, func(publish *paho.Publish) {
 					c.Channel <- string(publish.Payload)
 				})
 			}
@@ -100,7 +105,7 @@ func (s *Server) AddDevice(device *device.Device) error {
 	}
 
 	if cm != nil {
-		if err := s.publishDevice(s.pahoMgr, device); err != nil {
+		if err := s.publishDevice(ctx, s.pahoMgr, device); err != nil {
 			return err
 		}
 	}
@@ -108,14 +113,16 @@ func (s *Server) AddDevice(device *device.Device) error {
 	return nil
 }
 
-func (s *Server) publishDevice(cm *autopaho.ConnectionManager, device *device.Device) error {
+func (s *Server) publishDevice(ctx context.Context, cm *autopaho.ConnectionManager, device *device.Device) error {
 	buf, err := json.Marshal(device)
 	if err != nil {
 		return err
 	}
 
+	rctx, cancel := timeout(ctx, s.reqTimeout)
+	defer cancel()
 	_, err = cm.Publish(
-		context.Background(),
+		rctx,
 		&paho.Publish{
 			QoS:     byte(1),
 			Topic:   device.DiscoveryTopic(),
@@ -138,27 +145,25 @@ func (s *Server) Start(ctx context.Context) error {
 
 	s.pahoMgr = c
 
-	_ = s.Subscribe("homeassistant/status", func(publish *paho.Publish) {
+	return s.Subscribe(ctx, "homeassistant/status", func(publish *paho.Publish) {
 		if string(publish.Payload) == "online" {
 			if len(s.Devices) == 0 {
 				return
 			}
 			for _, dev := range s.Devices {
-				if err = s.publishDevice(s.pahoMgr, dev); err != nil {
+				if err = s.publishDevice(ctx, s.pahoMgr, dev); err != nil {
 					fmt.Printf("Unable to publish device: %s\n", err)
 				}
 			}
 		}
 	})
-
-	return nil
 }
 
 func (s *Server) WillTopic() string {
 	return "homeassistant/client/" + s.pahoConfig.ClientID + "/status"
 }
 
-func New(u string, clientID string) (*Server, error) {
+func New(ctx context.Context, u string, clientID string) (*Server, error) {
 	srv, err := url.Parse(u)
 	if err != nil {
 		return nil, err
@@ -168,6 +173,7 @@ func New(u string, clientID string) (*Server, error) {
 
 	var s *Server
 	s = &Server{
+		reqTimeout: 5 * time.Second,
 		pahoRouter: r,
 		pahoConfig: autopaho.ClientConfig{
 			ServerUrls:                    []*url.URL{srv},
@@ -190,19 +196,23 @@ func New(u string, clientID string) (*Server, error) {
 					for _, topic := range subscr {
 						subs = append(subs, paho.SubscribeOptions{Topic: topic})
 					}
-					_, err := cm.Subscribe(context.Background(), &paho.Subscribe{Subscriptions: subs})
+					rctx, cancel := timeout(ctx, s.reqTimeout)
+					defer cancel()
+					_, err := cm.Subscribe(rctx, &paho.Subscribe{Subscriptions: subs})
 					if err != nil {
 						fmt.Printf("Unable to subscribe: %s\n", err)
 					}
 				}
 
 				for _, dev := range devs {
-					if err = s.publishDevice(cm, dev); err != nil {
+					if err = s.publishDevice(ctx, cm, dev); err != nil {
 						fmt.Printf("Unable to publish device: %s\n", err)
 					}
 				}
 
-				_, err = cm.Publish(context.Background(), &paho.Publish{
+				rctx, cancel := timeout(ctx, s.reqTimeout)
+				defer cancel()
+				_, err = cm.Publish(rctx, &paho.Publish{
 					QoS:     2,
 					Topic:   "homeassistant/client/" + clientID + "/status",
 					Payload: []byte("online"),

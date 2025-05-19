@@ -32,7 +32,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	srv := check1(server.New(os.Getenv("MQTT_ADDRESS"), "bibliotek-demo-sensor"))
+	srv := check1(server.New(ctx, os.Getenv("MQTT_ADDRESS"), "bibliotek-demo-sensor"))
 	check(srv.Start(ctx))
 
 	sensor := component.NewTempSensor("Temperature", "bibliotek_demo_temp")
@@ -61,7 +61,7 @@ func main() {
 		},
 	}
 	check(dev.SetComponent("temp", sensor))
-	check(srv.AddDevice(dev))
+	check(srv.AddDevice(ctx, dev))
 
 	<-ctx.Done()
 	stop()
