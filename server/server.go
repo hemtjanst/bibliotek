@@ -186,6 +186,7 @@ func New(ctx context.Context, log *slog.Logger, u string, clientID string) (*Ser
 			KeepAlive:                     20,
 			CleanStartOnInitialConnection: true,
 			SessionExpiryInterval:         0,
+			DisconnectPacketBuilder:       func() *paho.Disconnect { return nil }, // "ungraceful" disconnect so LWT is always sent
 			WillMessage: &paho.WillMessage{
 				QoS:     2,
 				Topic:   path.Join("homeassistant", "client", clientID, "status"),
