@@ -184,8 +184,8 @@ func New(ctx context.Context, log *slog.Logger, u string, clientID string) (*Ser
 			PahoErrors:                    slog.NewLogLogger(log.Handler(), slog.LevelError),
 			ServerUrls:                    []*url.URL{srv},
 			KeepAlive:                     20,
-			CleanStartOnInitialConnection: false,
-			SessionExpiryInterval:         60,
+			CleanStartOnInitialConnection: true,
+			SessionExpiryInterval:         0,
 			WillMessage: &paho.WillMessage{
 				QoS:     2,
 				Topic:   path.Join("homeassistant", "client", clientID, "status"),
