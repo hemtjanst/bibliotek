@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/eclipse/paho.golang/autopaho"
+	"github.com/eclipse/paho.golang/packets"
 	"github.com/eclipse/paho.golang/paho"
 
 	"lib.hemtjan.st/component"
@@ -186,7 +187,9 @@ func New(ctx context.Context, log *slog.Logger, u string, clientID string) (*Ser
 			KeepAlive:                     20,
 			CleanStartOnInitialConnection: true,
 			SessionExpiryInterval:         0,
-			DisconnectPacketBuilder:       func() *paho.Disconnect { return nil }, // "ungraceful" disconnect so LWT is always sent
+			DisconnectPacketBuilder: func() *paho.Disconnect {
+				return &paho.Disconnect{ReasonCode: packets.DisconnectDisconnectWithWillMessage}
+			},
 			WillMessage: &paho.WillMessage{
 				QoS:     2,
 				Topic:   path.Join("homeassistant", "client", clientID, "status"),
