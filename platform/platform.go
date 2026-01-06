@@ -3,5 +3,6 @@ package platform
 type Type string
 
 const (
-	Sensor Type = "sensor"
+	Sensor       Type = "sensor"
+	SensorBinary Type = "binary_sensor"
 )
