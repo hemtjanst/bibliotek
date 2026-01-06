@@ -7,6 +7,7 @@ const (
 	Current          Class = "current"
 	Energy           Class = "energy"
 	Illuminance      Class = "illuminance"
+	Heat             Class = "heat"
 	RelativeHumidity Class = "humidity"
 	PM1              Class = "pm1"
 	PM25             Class = "pm25"

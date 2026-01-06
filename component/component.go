@@ -24,7 +24,7 @@ type Base struct {
 	Name                 string         `json:"name"`
 	ID                   string         `json:"uniq_id"`
 	Platform             platform.Type  `json:"p"`
-	DeviceClass          device.Class   `json:"dev_cla"`
+	DeviceClass          device.Class   `json:"dev_cla,omitempty"`
 	BaseTopic            string         `json:"~,omitempty"`
 	CommandTopic         string         `json:"cmd_t,omitempty"`
 	Encoding             string         `json:"e,omitempty"`
