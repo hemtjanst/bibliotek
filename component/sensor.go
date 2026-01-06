@@ -15,7 +15,7 @@ type Sensor struct {
 	Base
 	Template string           `json:"val_tpl,omitempty"`
 	Unit     unit.Measurement `json:"unit_of_meas,omitempty"`
-	State    state.Class      `json:"stat_cla"`
+	State    state.Class      `json:"stat_cla,omitempty"`
 	StateCh  chan string      `json:"-"`
 }
 
@@ -47,4 +47,17 @@ func NewTempSensor(name, id string) *Sensor {
 
 func NewBatterySensor(name, id string) *Sensor {
 	return NewSensor(name, id, device.Battery, state.Measurement, unit.Percent)
+}
+
+func NewBinarySensor(name, id string, class device.Class) *Sensor {
+	return &Sensor{
+		Base: Base{
+			ID:          id,
+			Name:        name,
+			Platform:    platform.SensorBinary,
+			DeviceClass: class,
+			StateTopic:  path.Join("homeassistant", "binary_sensor", id, "state"),
+		},
+		StateCh: make(chan string),
+	}
 }
