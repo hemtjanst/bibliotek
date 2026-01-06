@@ -13,4 +13,5 @@ type Info struct {
 	SuggestedArea   string   `json:"sa,omitempty"`
 	Connections     []string `json:"cns,omitempty"`
 	URL             string   `json:"cu,omitempty"`
+	Via             string   `json:"via_device,omitempty"`
 }
