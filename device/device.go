@@ -11,7 +11,7 @@ import (
 // A device groups multilpe entities together.
 type Device struct {
 	Info       Info                          `json:"dev"`
-	Origin     Origin                        `json:"o,omitempty"`
+	Origin     Origin                        `json:"o"`
 	Components map[string]component.Settable `json:"cmps,omitempty"`
 }
 
