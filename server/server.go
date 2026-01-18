@@ -232,7 +232,7 @@ func New(ctx context.Context, log *slog.Logger, u string, clientID string) (*Ser
 
 				rctx, cancel := timeout(ctx, s.reqTimeout)
 				defer cancel()
-				if _, err := s.pahoMgr.Publish(rctx, &paho.Publish{
+				if _, err := cm.Publish(rctx, &paho.Publish{
 					QoS:     2,
 					Topic:   path.Join("homeassistant", "client", clientID, "status"),
 					Payload: []byte("online"),
