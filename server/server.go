@@ -159,6 +159,16 @@ func (s *Server) Start(ctx context.Context) error {
 					s.logger.Error("unable to publish device", slog.String("error", err.Error()))
 				}
 			}
+
+			rctx, cancel := timeout(ctx, s.reqTimeout)
+			defer cancel()
+			if _, err := s.pahoMgr.Publish(rctx, &paho.Publish{
+				QoS:     2,
+				Topic:   path.Join("homeassistant", "client", s.pahoConfig.ClientID, "status"),
+				Payload: []byte("online"),
+			}); err != nil {
+				s.logger.Error("unable to publish status", slog.String("error", err.Error()))
+			}
 		}
 	})
 }
@@ -222,13 +232,11 @@ func New(ctx context.Context, log *slog.Logger, u string, clientID string) (*Ser
 
 				rctx, cancel := timeout(ctx, s.reqTimeout)
 				defer cancel()
-				_, err = cm.Publish(rctx, &paho.Publish{
+				if _, err := s.pahoMgr.Publish(rctx, &paho.Publish{
 					QoS:     2,
 					Topic:   path.Join("homeassistant", "client", clientID, "status"),
 					Payload: []byte("online"),
-				})
-
-				if err != nil {
+				}); err != nil {
 					s.logger.Error("unable to publish status", slog.String("error", err.Error()))
 				}
 
