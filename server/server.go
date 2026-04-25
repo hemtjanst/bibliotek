@@ -170,17 +170,19 @@ func (s *Server) Start(ctx context.Context) error {
 				}
 			}
 
-			rctx, cancel := timeout(ctx, s.reqTimeout)
-			defer cancel()
-			if _, err := s.pahoMgr.Publish(rctx, &paho.Publish{
-				QoS:     2,
-				Topic:   path.Join("homeassistant", "client", s.pahoConfig.ClientID, "status"),
-				Payload: []byte("online"),
-			}); err != nil {
-				s.logger.Error("unable to publish status", slog.String("error", err.Error()))
-			}
+			time.AfterFunc(3*time.Second, func() {
+				rctx, cancel := timeout(ctx, s.reqTimeout)
+				defer cancel()
+				if _, err := s.pahoMgr.Publish(rctx, &paho.Publish{
+					QoS:     2,
+					Topic:   path.Join("homeassistant", "client", s.pahoConfig.ClientID, "status"),
+					Payload: []byte("online"),
+				}); err != nil {
+					s.logger.Error("unable to publish status", slog.String("error", err.Error()))
+				}
 
-			s.triggerResend()
+				s.triggerResend()
+			})
 		}
 	})
 }
