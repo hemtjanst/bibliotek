@@ -30,6 +30,8 @@ type Server struct {
 	pahoMgr    *autopaho.ConnectionManager
 	pahoRouter *paho.StandardRouter
 
+	resendCh chan struct{}
+
 	sync.RWMutex
 }
 
@@ -88,12 +90,20 @@ func (s *Server) AddDevice(ctx context.Context, device *device.Device) error {
 		if cmpUpdatable, ok := cmp.(component.Updatable); ok {
 			for _, c := range cmpUpdatable.UpdateChannels() {
 				go func(c component.UpdateChannel) {
+					var lastMsg string
 					for {
-						msg, open := <-c.Channel
-						if !open {
-							return
+						select {
+						case msg, open := <-c.Channel:
+							if !open {
+								return
+							}
+							_ = s.Publish(ctx, c.Topic, 1, []byte(msg))
+							lastMsg = msg
+						case <-s.resend():
+							if lastMsg != "" {
+								_ = s.Publish(ctx, c.Topic, 1, []byte(lastMsg))
+							}
 						}
-						_ = s.Publish(ctx, c.Topic, 1, []byte(msg))
 					}
 				}(c)
 			}
@@ -169,6 +179,8 @@ func (s *Server) Start(ctx context.Context) error {
 			}); err != nil {
 				s.logger.Error("unable to publish status", slog.String("error", err.Error()))
 			}
+
+			s.triggerResend()
 		}
 	})
 }
@@ -189,6 +201,7 @@ func New(ctx context.Context, log *slog.Logger, u string, clientID string) (*Ser
 	s = &Server{
 		reqTimeout: 5 * time.Second,
 		logger:     log,
+		resendCh:   make(chan struct{}),
 		pahoRouter: r,
 		pahoConfig: autopaho.ClientConfig{
 			Errors:                        slog.NewLogLogger(log.Handler(), slog.LevelError),
@@ -259,4 +272,18 @@ func New(ctx context.Context, log *slog.Logger, u string, clientID string) (*Ser
 	}
 
 	return s, nil
+}
+
+func (s *Server) resend() <-chan struct{} {
+	s.RLock()
+	defer s.RUnlock()
+	return s.resendCh
+}
+
+func (s *Server) triggerResend() {
+	s.Lock()
+	oldCh := s.resendCh
+	s.resendCh = make(chan struct{})
+	s.Unlock()
+	close(oldCh)
 }
